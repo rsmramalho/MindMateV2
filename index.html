@@ -4,31 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindMate | Dashboard Integrado</title>
+    <!-- Tailwind CSS CDN - Usado para prototipagem rápida. Em produção, use a instalação via PostCSS. -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN - Comentado temporariamente para isolar o problema de carregamento.
+         Será reativado ou substituído após a base estabilizar. -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <!-- Font Inter do Google Fonts para uma estética limpa e moderna. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Estilos globais para a fonte e background */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8f7f4;
-            color: #3a3a3a;
+            background-color: #f8f7f4; /* Cor de fundo suave */
+            color: #3a3a3a; /* Cor de texto principal */
         }
-        .module-color-body { --module-color: #ef4444; } .module-color-mind { --module-color: #3b82f6; }
-        .module-color-family { --module-color: #22c55e; } .module-color-work { --module-color: #f97316; }
-        .module-color-finance { --module-color: #8b5cf6; } .module-color-purpose { --module-color: #eab308; }
-        .module-color-bridge { --module-color: #64748b; } .module-color-default { --module-color: #9ca3af; }
+        /* Definição de variáveis CSS para cores de módulo, permitindo fácil theming */
+        .module-color-body { --module-color: #ef4444; } /* Vermelho */
+        .module-color-mind { --module-color: #3b82f6; } /* Azul */
+        .module-color-family { --module-color: #22c55e; } /* Verde */
+        .module-color-work { --module-color: #f97316; } /* Laranja */
+        .module-color-finance { --module-color: #8b5cf6; } /* Roxo */
+        .module-color-purpose { --module-color: #eab308; } /* Amarelo */
+        .module-color-bridge { --module-color: #64748b; } /* Cinza Azulado */
+        .module-color-default { --module-color: #9ca3af; } /* Cinza Padrão */
 
+        /* Estilo para a borda esquerda de itens baseada na cor do módulo */
         .module-item-border { border-left: 4px solid var(--module-color); }
+        /* Transições suaves para interatividade dos itens */
         .planner-item, .list-item, .ritual-card { transition: all 0.2s ease-in-out; }
         .planner-item:hover, .list-item:hover, .ritual-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        /* Estilo para botões de filtro ativos */
         .filter-button.active { background-color: var(--module-color) !important; color: white !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        /* Estilo para botões de aba ativos */
         .tab-button.active { border-bottom-color: var(--module-color); color: var(--module-color); }
+        /* Animação do loader de carregamento */
         #loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="antialiased">
+    <!-- Tela de carregamento inicial -->
     <div id="loader-container" class="fixed inset-0 bg-white/80 flex items-center justify-center z-[100]">
         <div class="text-center">
             <div id="loader" class="mx-auto"></div>
@@ -36,22 +53,28 @@
         </div>
     </div>
 
+    <!-- Conteúdo principal do dashboard, inicialmente oculto -->
     <div id="app" class="container mx-auto p-4 md:p-8 opacity-0 transition-opacity duration-500">
+        <!-- Cabeçalho do Dashboard -->
         <header class="mb-8">
             <h1 class="text-4xl font-bold text-gray-800">MindMate Dashboard</h1>
             <p class="text-lg text-gray-500">Seu centro de comando para uma vida com intenção e clareza.</p>
         </header>
 
+        <!-- Seções principais do layout: 2/3 para conteúdo, 1/3 para filtros/gráficos -->
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 order-2 lg:order-1">
+                 <!-- Seção Foco do Dia -->
                  <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Foco do Dia</h2>
                     <div id="today-focus-list" class="space-y-3"></div>
                 </div>
+                <!-- Seção Planner Semanal -->
                  <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Planner Semanal</h2>
                     <div id="planner-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
                 </div>
+                <!-- Seção de Conteúdo Principal (abas: Projetos, Tarefas, Diário, etc.) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                      <div class="border-b border-gray-200 mb-4">
                         <nav class="-mb-px flex space-x-6 overflow-x-auto" id="main-tabs"></nav>
@@ -60,6 +83,14 @@
                 </div>
             </div>
             <div class="lg:col-span-1 order-1 lg:order-2">
+                <!-- Balanço dos Módulos (Chart.js) - COMENTADO TEMPORARIAMENTE -->
+                <!--
+                <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Balanço dos Módulos</h3>
+                    <div class="h-64"><canvas id="moduleBalanceChart"></canvas></div>
+                </div>
+                -->
+                <!-- Filtros por Módulo -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <h3 class="text-xl font-bold text-gray-800 mb-4">Filtros</h3>
                     <div id="filter-container" class="flex flex-wrap gap-2"></div>
@@ -68,29 +99,35 @@
         </main>
     </div>
 
+    <!-- Botão de Ação Flutuante (FAB) para Captura Rápida -->
     <div id="fab-container" class="fixed bottom-8 right-8 z-40">
         <button onclick="openQuickAddModal()" class="w-16 h-16 bg-blue-600 rounded-full text-white flex items-center justify-center text-3xl shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110">+</button>
     </div>
 
+    <!-- Modal para Captura Rápida e Confirmação -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div id="modal-content" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8"></div>
     </div>
 
     <script type="module">
-        let moduleBalanceChart; // Ainda declarado, mas não será usado
+        // Variável para a instância do Chart.js, ainda declarada mas não usada enquanto o Chart.js está comentado.
+        let moduleBalanceChart;
 
-        // ** SUA URL DO GOOGLE APPS SCRIPT JÁ ATUALIZADA AQUI **
+        // ** SEU URL DE IMPLANTAÇÃO DO GOOGLE APPS SCRIPT **
+        // Este URL é crucial para a comunicação do dashboard com a sua API.
         const GOOGLE_APPS_SCRIPT_API_URL = 'https://script.google.com/macros/s/AKfycbz4SKEhQwWwEWQ-VgwG7YmT3V2eFqqFlfOTxk8AdyHTohTE2wzLVBGxM1izseKpsc8q/exec'; 
 
+        // Objeto de estado global para gerenciar os dados e a UI da aplicação.
         const state = {
-            allItems: [],
-            modalOpen: false,
-            gemResponse: null,
-            apiFeedbackMessage: null,
-            activeTab: 'projetos',
-            currentFilter: 'all',
+            allItems: [], // Array principal de todos os itens do MindMate
+            modalOpen: false, // Estado do modal de captura rápida
+            gemResponse: null, // Resposta parseada localmente do Gem para confirmação
+            apiFeedbackMessage: null, // Mensagem de feedback direto da API do Apps Script
+            activeTab: 'projetos', // Aba ativa padrão ao carregar
+            currentFilter: 'all', // Filtro de módulo ativo padrão
         };
 
+        // Configuração dos módulos do MindMate, incluindo nome, cor e ícone.
         const moduleConfig = {
             body: { name: 'Corpo', color: '#ef4444', icon: '💪' },
             mind: { name: 'Mente', color: '#3b82f6', icon: '🧠' },
@@ -98,45 +135,601 @@
             work: { name: 'Trabalho', color: '#f97316', icon: '💼' },
             finance: { name: 'Finanças', color: '#8b5cf6', icon: '💰' },
             purpose: { name: 'Propósito', color: '#eab308', icon: '🧭' },
-            bridge: { name: 'Ponte', color: '#64748b', icon: '🌉' },
-            default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
+            bridge: { name: 'Ponte', color: '#64748b', icon: '🌉' }, // Módulo para integração entre áreas
+            default: { name: 'Geral', color: '#9ca3af', icon: '📋' } // Módulo padrão para itens sem tags específicas
         };
         
-        // --- CONECTANDO COM A API REAL DO GOOGLE APPS SCRIPT ---
+        /**
+         * Chama a API do Google Apps Script para processar o texto do usuário com o "Gem".
+         * Esta função lida com a comunicação assíncrona e feedback visual.
+         * @param {string} text - O texto inserido pelo usuário na Captura Rápida.
+         * @returns {Object} Um objeto com `success`, `gemResponse` (parseado localmente) e `feedback` da API.
+         */
         async function callMindMateGem(text) {
             const submitBtn = document.getElementById('quick-add-submit');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Processando...';
+            submitBtn.disabled = true; // Desabilita o botão para evitar múltiplos cliques
+            submitBtn.textContent = 'Processando...'; // Altera o texto do botão
 
             try {
+                // Realiza a chamada POST para a API do Google Apps Script.
                 const response = await fetch(GOOGLE_APPS_SCRIPT_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ action: 'processText', text: text })
+                    body: JSON.stringify({ action: 'processText', text: text }) // Envia o texto do usuário e a ação
                 });
-                const data = await response.json();
+                const data = await response.json(); // Converte a resposta para JSON
 
+                // Verifica se a API retornou sucesso.
                 if (data.success) {
+                    // O Google Apps Script retorna apenas o feedback da IA (`nome_atividade` no momento).
+                    // Para mostrar mais detalhes (tipo, tags, etc.) na tela de confirmação do frontend,
+                    // precisamos re-parsear o texto original localmente com uma lógica similar à do Gem.
+                    // FUTURAMENTE: A API do Apps Script deve retornar o objeto 'classificacao' completo do Gem.
                     const parsedForConfirmation = parseLocallyForConfirmation(text, data.feedback); 
                     return { success: true, gemResponse: parsedForConfirmation, feedback: data.feedback };
                 } else {
+                    // Loga o erro da API e exibe um alerta para o usuário.
                     console.error("Erro da API do Apps Script:", data.error);
                     alert("Ocorreu um erro ao processar sua solicitação: " + data.error);
                     return { success: false, error: data.error };
                 }
             } catch (error) {
+                // Loga erros de rede ou de fetch e exibe um alerta.
                 console.error("Erro ao chamar a API do Google Apps Script:", error);
                 alert("Não foi possível conectar com a API do MindMate. Verifique sua conexão ou o URL da API.");
                 return { success: false, error: error.message };
             } finally {
+                // Restaura o estado do botão ao final da operação (sucesso ou falha).
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Processar com IA';
             }
         }
 
-        // Esta função é uma REPLICAÇÃO da lógica do Gem APENAS para fins de CONFIRMAÇÃO VISUAL no FRONTEND.
+        /**
+         * Esta função replica a lógica de parsing do Gem LOCALMENTE no frontend APENAS para a tela de CONFIRMAÇÃO.
+         * É um workaround. O ideal é que a API do Apps Script retorne o objeto completo de classificação do Gem.
+         * Ela extrai tipo, tags, datas, horas e subtarefas do texto.
+         * @param {string} text - O texto original do usuário.
+         * @param {string} feedbackFromApi - O feedback inicial da API (nome da atividade).
+         * @returns {Object} Um objeto simulando a estrutura de classificação do Gem.
+         */
         function parseLocallyForConfirmation(text, feedbackFromApi) {
             let currentText = text;
+            // 1. Extração de Tags: Encontra todas as palavras que começam com '#'
             const tagsArray = currentText.match(/#\w+/g) || [];
+            const tags = tagsArray.join(' '); // Junta as tags em uma única string
+            currentText = currentText.replace(/#\w+/g, '').trim(); // Remove as tags do texto principal
+
+            // 2. Extração de Subtarefas: Procura por "com subtarefas:"
+            let subtarefas = [];
+            const subtaskMatch = currentText.match(/com subtarefas:(.*)/i);
+            if (subtaskMatch) {
+                subtarefas = subtaskMatch[1].split(',').map(s => ({ texto: s.trim(), concluida: false }));
+                currentText = currentText.substring(0, subtaskMatch.index).trim();
+            }
+
+            // 3. Extração de Data e Hora
+            let dataAgendada = null;
+            let horaAgendada = null;
+            const now = new Date();
+
+            // Tenta extrair a hora (ex: "às 09:00", "09:00am")
+            const timeMatch = currentText.match(/(\d{1,2}:\d{2})(?:[ap]m)?/i);
+             if (timeMatch) {
+                horaAgendada = timeMatch[1];
+                currentText = currentText.replace(timeMatch[0], '').trim();
+            }
+            
+            // Tenta extrair datas relativas (hoje, amanhã) ou dias da semana (segunda, terça...)
+            const dayKeywords = { 'hoje': 0, 'amanhã': 1, 'domingo': 0, 'segunda': 1, 'terça': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sábado': 6 };
+            
+            for (const keyword of Object.keys(dayKeywords)) {
+                if (currentText.toLowerCase().includes(keyword)) {
+                    const targetDate = new Date(); // Começa com a data atual
+                    let dayOfWeek = dayKeywords[keyword]; // Dia da semana alvo (0=domingo, 1=segunda...)
+                    let currentDayOfWeek = now.getDay(); // Dia da semana atual
+
+                    if (keyword === 'hoje') {
+                        targetDate.setDate(now.getDate()); // Se "hoje", a data já é a atual
+                    } else if (keyword === 'amanhã') {
+                        targetDate.setDate(now.getDate() + 1); // Se "amanhã", adiciona 1 dia
+                    } else {
+                        // Para dias da semana (segunda, terça, etc.)
+                        let diff = dayOfWeek - currentDayOfWeek; // Diferença entre o dia alvo e o dia atual
+                        if (diff <= 0) { // Se o dia já passou esta semana ou é o mesmo dia, vai para a próxima semana
+                            diff += 7;
+                        }
+                        targetDate.setDate(now.getDate() + diff); // Define a data alvo
+                    }
+                    dataAgendada = targetDate.toISOString().split('T')[0]; // Formata para Laufe-MM-DD
+                    currentText = currentText.replace(new RegExp(keyword, 'i'), '').trim(); // Remove a palavra-chave de data
+                    break; // Sai do loop após encontrar a primeira palavra-chave de data
+                }
+            }
+
+            // Tenta extrair datas absolutas (ex: "15/06", "15/06/2025")
+            const absoluteDateMatch = currentText.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
+            if (absoluteDateMatch) {
+                let parts = absoluteDateMatch[1].split('/');
+                let day = parseInt(parts[0]);
+                let month = parseInt(parts[1]) - 1; // Meses em JS são 0-indexed (Janeiro=0)
+                let year = parts[2] ? parseInt(parts[2]) : now.getFullYear(); // Ano opcional
+                if (parts[2] && parts[2].length === 2) { // Ex: se for '24', assume '2024'
+                    year = 2000 + year; 
+                }
+                
+                const parsedDate = new Date(year, month, day);
+                // Valida se a data é real (ex: 31/02 não é uma data válida)
+                if (parsedDate.getDate() === day && parsedDate.getMonth() === month && parsedDate.getFullYear() === year) {
+                    dataAgendada = parsedDate.toISOString().split('T')[0];
+                    currentText = currentText.replace(absoluteDateMatch[0], '').trim();
+                }
+            }
+
+            // 4. Determinação do Tipo de Atividade
+            let tipo = 'tarefa'; // Tipo padrão
+            const lowerCaseText = currentText.toLowerCase();
+
+            // Prioriza tipos explícitos no início da frase
+            if (lowerCaseText.startsWith('diario:') || lowerCaseText.includes('diário:')) tipo = 'diario';
+            else if (lowerCaseText.startsWith('projeto:') || lowerCaseText.includes('projeto:')) tipo = 'projeto';
+            else if (lowerCaseText.startsWith('planner:') || lowerCaseText.includes('planner:')) tipo = 'planner';
+            else if (lowerCaseText.startsWith('tarefa:') || lowerCaseText.includes('tarefa:')) tipo = 'tarefa';
+            else if (lowerCaseText.startsWith('lista:') || lowerCaseText.includes('lista:')) tipo = 'lista';
+            else if (lowerCaseText.includes('ritual:')) tipo = 'planner'; // Rituais são um tipo de planner
+            else if (lowerCaseText.includes('hábito:')) tipo = 'planner'; // Hábitos também são um tipo de planner
+
+            // Inferência de tipo se nenhum tipo explícito foi encontrado
+            if (tipo === 'tarefa') { // Somente tenta inferir se ainda está no tipo padrão 'tarefa'
+                if (subtarefas.length > 0 || lowerCaseText.includes('projeto')) tipo = 'projeto';
+                else if (dataAgendada || horaAgendada) tipo = 'planner';
+                else if (/\b(sinto|senti|refletir|reflexão|insight)\b/i.test(lowerCaseText) || tags.includes('#emo_') || tags.includes('#emob_')) tipo = 'diario';
+                else if (lowerCaseText.includes('comprar') || lowerCaseText.includes('mercado') || tags.includes('#tag_compras')) tipo = 'lista';
+                else tipo = 'nota_ideia'; // Último fallback para notas gerais
+            }
+            
+            // Remove palavras-chave de tipo do nome da atividade (ex: "tarefa: fazer X" -> "fazer X")
+            const typeKeywordsRegex = /^(diario|diário|projeto|planner|tarefa|lista|ritual|hábito):?\s*/i;
+            currentText = currentText.replace(typeKeywordsRegex, '').trim();
+
+            // Define o nome da atividade, usando o feedback da API como fallback se o parsing local falhar.
+            const nome_atividade = currentText || (feedbackFromApi ? feedbackFromApi.replace('MindMate: ', '').replace(' registrada!', '').replace(' registrado!', '').trim() : "Atividade sem nome");
+            
+            // 5. Determinação do Serviço Google Apps para a Ação
+            let google_action_service = "GoogleTasks"; // Serviço padrão
+            switch(tipo) {
+                case 'planner': google_action_service = "GoogleCalendar"; break;
+                case 'projeto': google_action_service = "GoogleDocs"; break;
+                case 'diario': 
+                case 'nota_ideia': 
+                case 'lista': google_action_service = "GoogleKeep"; break; // Google Keep para estes tipos
+                case 'tarefa': google_action_service = "GoogleTasks"; break;
+            }
+
+            // Capitaliza a primeira letra do tipo para exibição.
+            const properType = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+
+            // Retorna o objeto completo de classificação e a ação sugerida.
+            return {
+                classificacao: { id: `item_${Date.now()}`, nome_atividade, tipo: properType, tags, data_agendada: dataAgendada, hora_agendada: horaAgendada, subtarefas, status: 'Ativo' },
+                google_action: { service: google_action_service }
+            };
+        }
+
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+
+        /**
+         * Extrai a chave do módulo (ex: 'work', 'mind') de uma string de tags.
+         * Retorna 'default' se nenhuma tag de módulo for encontrada ou reconhecida.
+         * @param {string} tags - String contendo tags (ex: "#mod_work #emo_foco").
+         * @returns {string} A chave do módulo.
+         */
+        function getModuleFromTags(tags) {
+            if(!tags) return 'default';
+            const tagArray = tags.split(' ').map(tag => tag.trim());
+            const modTag = tagArray.find(t => t.startsWith('#mod_'));
+            if (!modTag) return 'default';
+            const moduleKey = modTag.replace('#mod_', '');
+            return moduleConfig[moduleKey] ? moduleKey : 'default';
+        }
+
+        /**
+         * Renderiza todas as seções do dashboard.
+         */
+        function renderAll() {
+            renderFilters(); // Renderiza os botões de filtro
+            renderPlanner(); // Renderiza o planner semanal
+            renderMainContent(); // Renderiza o conteúdo da aba principal (Projetos, Tarefas, etc.)
+            renderTodaysFocus(); // Renderiza o foco do dia
+            // renderChart(); // Função do gráfico comentada temporariamente
+        }
+
+        /**
+         * Define a aba principal ativa e re-renderiza o conteúdo.
+         * @param {string} tabName - O nome da aba a ser ativada.
+         */
+        window.setActiveTab = (tabName) => {
+            state.activeTab = tabName;
+            renderMainContent();
+        }
+
+        /**
+         * Define o filtro de módulo ativo e re-renderiza todo o dashboard.
+         * @param {string} moduleKey - A chave do módulo a ser filtrado.
+         */
+        window.setFilter = (moduleKey) => {
+            state.currentFilter = moduleKey;
+            renderAll();
+        }
+        
+        /**
+         * Renderiza a navegação principal (abas) e o conteúdo da aba ativa.
+         */
+        function renderMainContent() {
+             const tabsContainer = document.getElementById('main-tabs');
+             const contentContainer = document.getElementById('main-content');
+             if(!tabsContainer || !contentContainer) return;
+
+             // HTML para todas as abas MindMate, conforme documentação
+             tabsContainer.innerHTML = `
+                <button onclick="setActiveTab('inbox')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📥 Inbox</button>
+                <button onclick="setActiveTab('coach')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🤖 Coach</button>
+                <button onclick="setActiveTab('biblioteca')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📚 Biblioteca</button>
+                <button onclick="setActiveTab('projetos')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
+                <button onclick="setActiveTab('tarefas')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
+                <button onclick="setActiveTab('listas')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📝 Listas</button>
+                <button onclick="setActiveTab('diario')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
+                <button onclick="setActiveTab('rituais')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🕯️ Rituais</button>
+                <button onclick="setActiveTab('analise')" class="tab-button py-4 px-1 border-b-2 font-lg">📊 Análise</button>
+                <button onclick="setActiveTab('revisao_semanal')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Revisão Semanal</button>
+             `;
+             
+             // Ativa a classe 'active' para a aba selecionada.
+             document.querySelectorAll('.tab-button').forEach(btn => {
+                // Usa includes e replace para lidar com "revisao_semanal" vs "Revisão Semanal"
+                if (btn.textContent.toLowerCase().includes(state.activeTab.replace('_', ' '))) {
+                    btn.classList.add('active', 'border-blue-600', 'text-blue-600');
+                    btn.style.setProperty('--module-color', '#3b82f6'); // Cor de destaque para aba ativa
+                } else {
+                    btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+                }
+             });
+
+            let contentHtml = '';
+            let filteredItems = [];
+
+            // Lógica para filtrar e renderizar itens baseada na aba ativa.
+            switch(state.activeTab) {
+                case 'projetos':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'projeto');
+                    break;
+                case 'tarefas':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'tarefa');
+                    break;
+                case 'diario':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'diario');
+                    break;
+                case 'inbox':
+                    // Itens do inbox são geralmente do tipo 'Nota_ideia' no nosso sistema
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'nota_ideia');
+                    break;
+                case 'listas':
+                    // Listas podem ter o tipo 'Lista' ou a tag '#tag_compras'
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'lista' || (item.classificacao.tags && item.classificacao.tags.includes('#tag_compras')));
+                    break;
+                case 'rituais':
+                    // Rituais são planners com a tag #type_personal_ritual
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'planner' && item.classificacao.tags && item.classificacao.tags.includes('#type_personal_ritual'));
+                    break;
+                case 'coach':
+                case 'biblioteca':
+                case 'analise':
+                case 'revisao_semanal':
+                    // Conteúdo para abas ainda não implementadas.
+                    contentHtml = `<p class="text-gray-500 text-center py-8">Conteúdo para a aba '${state.activeTab.replace('_', ' ')}' ainda não implementado.</p>`;
+                    contentContainer.innerHTML = contentHtml;
+                    return; // Sai da função pois o conteúdo já foi definido.
+            }
+
+            // Aplica o filtro de módulo se houver um selecionado.
+            if (state.currentFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+            }
+
+            // Renderiza a lista de itens filtrados.
+            if (filteredItems.length === 0) {
+                contentHtml = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${state.activeTab.replace('_', ' ')}' encontrado com os filtros atuais.</p>`;
+            } else {
+                contentHtml = '<div class="space-y-3 pt-4">';
+                filteredItems.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemDate = classificacao.data_agendada ? new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '';
+                    const itemTime = classificacao.hora_agendada || '';
+                    const dateTimeDisplay = (itemDate || itemTime) ? `<span class="text-sm text-gray-500 ml-2">${itemDate} ${itemTime}</span>` : '';
+
+                    let subtarefasDisplay = '';
+                    if (classificacao.subtarefas && classificacao.subtarefas.length > 0) {
+                        subtarefasDisplay = `<ul class="list-disc list-inside text-xs text-gray-500 mt-1">` +
+                                            classificacao.subtarefas.map(s => `<li>${s.texto}</li>`).join('') +
+                                            `</ul>`;
+                    }
+
+                    contentHtml += `
+                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                            <p class="font-semibold">${classificacao.nome_atividade} ${dateTimeDisplay}</p>
+                            <p class="text-xs text-gray-500">${classificacao.tags || 'Nenhuma tag'}</p>
+                            ${subtarefasDisplay}
+                        </div>
+                    `;
+                });
+                contentHtml += '</div>';
+            }
+            contentContainer.innerHTML = contentHtml;
+        }
+        
+        /**
+         * Renderiza a lista de itens para o "Foco do Dia".
+         */
+        function renderTodaysFocus() {
+            const list = document.getElementById('today-focus-list');
+            if(!list) return;
+            list.innerHTML = '';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Zera hora para comparação de data
+
+            // Filtra itens agendados para hoje (planners e tarefas)
+            const todaysItems = state.allItems
+                .filter(item => {
+                    const itemDateStr = item.classificacao.data_agendada;
+                    if (!itemDateStr) return false; 
+                    const itemDate = new Date(itemDateStr + 'T00:00:00');
+                    const isToday = itemDate.getTime() === today.getTime();
+                    
+                    const isPlannerOrTask = item.classificacao.tipo.toLowerCase() === 'planner' || item.classificacao.tipo.toLowerCase() === 'tarefa';
+                    
+                    return isToday && isPlannerOrTask;
+                })
+                .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || '')); // Ordena por hora
+
+            if(todaysItems.length === 0) {
+                list.innerHTML = `<p class="text-gray-500">Nenhuma atividade agendada para hoje.</p>`;
+                return;
+            }
+            todaysItems.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                const itemEl = document.createElement('div');
+                itemEl.className = `today-item flex items-center p-3 rounded-lg bg-white`;
+                itemEl.innerHTML = `
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
+                    <label class="flex-grow">
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                    </label>
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${moduleConfig[module].color}"></span>`;
+                list.appendChild(itemEl);
+            });
+        }
+
+        /**
+         * Renderiza o grid do Planner Semanal.
+         */
+        function renderPlanner() {
+            const plannerGrid = document.getElementById('planner-grid');
+            if(!plannerGrid) return;
+            plannerGrid.innerHTML = '';
+            // Dias da semana, começando em Domingo (getDay() retorna 0 para Domingo)
+            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']; 
+            
+            days.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
+                dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
+                
+                // Filtra apenas itens do tipo 'Planner' para o dia da semana atual.
+                const dayItems = state.allItems
+                    .filter(item => {
+                        if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
+                        const itemDate = new Date(item.classificacao.data_agendada + "T00:00:00");
+                        return itemDate.getDay() === index; 
+                    })
+                    .sort((a,b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+                
+                dayItems.forEach(item => {
+                    const {classificacao} = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
+                    dayColumn.appendChild(itemEl);
+                });
+                plannerGrid.appendChild(dayColumn);
+            });
+        }
+        
+        /**
+         * Renderiza os botões de filtro por módulo.
+         */
+        function renderFilters() {
+            const filterContainer = document.getElementById('filter-container');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+
+            // Botão "Todos"
+            const allButton = document.createElement('button');
+            allButton.textContent = 'Todos';
+            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
+            allButton.style.setProperty('--module-color', '#4b5563'); // Cor para o botão 'Todos'
+            if (state.currentFilter === 'all') allButton.classList.add('active');
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
+            filterContainer.appendChild(allButton);
+
+            // Botões para cada módulo configurado
+            Object.entries(moduleConfig).forEach(([key, config]) => {
+                if (key === 'default') return; // Ignora o módulo padrão para os botões de filtro
+                const button = document.createElement('button');
+                button.innerHTML = `${config.icon} ${config.name}`; // Ícone + Nome do módulo
+                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
+                button.style.setProperty('--module-color', config.color); // Define a cor do botão
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
+                filterContainer.appendChild(button);
+            });
+        }
+        
+        // renderChart() - FUNÇÃO COMENTADA CONFORME ACORDADO
+        /*
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
+            }
+
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if(key !== 'default') moduleCounts[key] = 0; });
+
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if(moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
+                    }
+                });
+            });
+
+            moduleBalanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+        }
+        */
+
+        // --- LÓGICA DO MODAL ---
+
+        /**
+         * Abre o modal de Captura Rápida, preparando a interface para a entrada do usuário.
+         */
+        window.openQuickAddModal = () => {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: planejar o novo site da empresa com subtarefas: alinhar design, desenvolver frontend, testar"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
+                </div>
+            `;
+            modal.classList.remove('hidden'); // Mostra o modal
+            modal.classList.add('flex'); // Usa flexbox para centralizar
+            document.getElementById('quick-add-input').focus(); // Foca no campo de texto
+            
+            // Define o evento de clique para o botão "Processar com IA".
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if(!input) return; // Não faz nada se a entrada estiver vazia
+                
+                const apiResult = await callMindMateGem(input); // Chama a API do Apps Script
+                if (apiResult.success) {
+                    state.gemResponse = apiResult.gemResponse; // Guarda a resposta para a tela de confirmação
+                    state.apiFeedbackMessage = apiResult.feedback; // Guarda o feedback da API
+                    renderConfirmationView(); // Mostra a tela de confirmação
+                } else {
+                    // Exibe um alerta de erro caso a API falhe.
+                    alert("Não foi possível processar a captura. Tente novamente: " + (apiResult.error || "Erro desconhecido."));
+                }
+            };
+        };
+        
+        /**
+         * Renderiza a tela de confirmação no modal, mostrando a classificação do Gem.
+         */
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
+             modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${classificacao.data_agendada ? `<p><strong>Data:</strong> ${new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${classificacao.subtarefas.length > 0 ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>` : ''}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
+                </div>
+                <div class="mt-6 flex gap-4">
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
+                </div>
+             `;
+        }
+
+        /**
+         * Confirma a ação, atualiza o estado local e fecha o modal.
+         * A ação real no Google Workspace já foi iniciada pela API do Apps Script.
+         */
+        window.confirmAction = async () => {
+             console.log("AÇÃO CONFIRMADA: Google Apps Script já executou ou está executando.");
+             state.allItems.push(state.gemResponse); // Adiciona o item à lista local para exibição no dashboard
+             renderAll(); // Re-renderiza todas as seções do dashboard para mostrar o novo item
+             alert(state.apiFeedbackMessage || "Ação executada com sucesso!"); // Exibe o feedback da API
+             closeModal(); // Fecha o modal
+        };
+        
+        /**
+         * Fecha o modal de Captura Rápida.
+         */
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+        };
+
+        // --- FUNÇÃO DE INICIALIZAÇÃO DO DASHBOARD ---
+        /**
+         * Função principal que é executada ao carregar a página.
+         * Popula os dados iniciais e renderiza o dashboard.
+         */
+        function main() {
+            // Dados de exemplo para popular o dashboard e testar as funcionalidades.
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind #type_personal_ritual", data_agendada: today.toISOString().split('T')[0], hora_agendada: "07:00", status: 'Ativo'}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório Mensal", tipo: "Planner", tags: "#mod_work", data_agendada: today.toISOString().split('T')[0], hora_agendada: "09:00", status: 'Ativo'}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance #type_fixed", data_agendada: tomorrow.toISOString().split('T')[0], hora_agendada: null, status: 'Ativo'}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose #type_project", data_agendada: null, hora_agendada: null, subtarefas: [{texto: "Definir escopo", concluida: false}, {texto: "Design", concluida: false}], status: 'Ativo'}},
+                {classificacao: {id: '5', nome_atividade: "Lista de Compras da Semana", tipo: "Lista", tags: "#mod_family #tag_compras", data_agendada: null, hora_agendada: null, status: 'Ativo'}}, 
+                {classificacao: {id: '6', nome_atividade: "Reflexão sobre o dia", tipo: "Diario", tags: "#mod_mind #emo_reflexao", data_agendada: today.toISOString().split('T')[0], hora_agendada: "23:00", status: 'Ativo'}},
+                {classificacao: {id: '7', nome_atividade: "Idéia para novo projeto pessoal", tipo: "Nota_ideia", tags: "#mod_purpose", data_agendada: null, hora_agendada: null, status: 'Ativo'}},
+                {classificacao: {id: '8', nome_atividade: "Preparar apresentação", tipo: "Tarefa", tags: "#mod_work", data_agendada: today.toISOString().split('T')[0], hora_agendada: null, status: 'Ativo'}},
+            ];
+
+            renderAll(); // Renderiza todo o conteúdo inicial
+            // Esconde o loader e mostra o conteúdo principal após a inicialização.
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
+        }
+
+        // Chama a função principal quando o script é carregado.
+        main();
+
+    </script>
+</body>
+</html>
