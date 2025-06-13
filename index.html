@@ -84,6 +84,11 @@
     <script type="module">
         let moduleBalanceChart;
 
+        // ** SUBSTITUA ESTE URL PELO SEU DEPLOYMENT DO GOOGLE APPS SCRIPT **
+        // Para obter este URL: No seu projeto do Google Apps Script, clique em "Implementar" > "Nova implantação".
+        // Escolha "Aplicativo da Web", configure o acesso como "Qualquer pessoa" e copie o "URL do aplicativo da web".
+        const GOOGLE_APPS_SCRIPT_API_URL = 'SEU_URL_DO_GOOGLE_APPS_SCRIPT_AQUI'; 
+
         const state = {
             allItems: [],
             modalOpen: false,
@@ -102,22 +107,49 @@
             default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
         };
         
-        // --- SIMULAÇÃO DA API E LÓGICA DO GEM ---
+        // --- CONECTANDO COM A API REAL DO GOOGLE APPS SCRIPT ---
         async function callMindMateGem(text) {
             const submitBtn = document.getElementById('quick-add-submit');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Processando...';
 
-            const parsed = parseWithGemLogic(text);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Processar com IA';
-            return parsed;
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'processText', text: text })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // O Google Apps Script retorna apenas o feedback da IA, 
+                    // mas para a confirmação no frontend, precisávamos de mais detalhes.
+                    // Idealmente, a API deveria retornar o objeto classificacao completo também.
+                    // POR ORA, vamos PARSEAR AQUI DE NOVO para mostrar na tela de confirmação.
+                    // FUTURAMENTE: A API do Apps Script deve retornar o 'gemResponse.classificacao' completo.
+                    const parsedForConfirmation = parseLocallyForConfirmation(text, data.feedback); 
+                    return { success: true, gemResponse: parsedForConfirmation, feedback: data.feedback };
+                } else {
+                    console.error("Erro da API do Apps Script:", data.error);
+                    alert("Ocorreu um erro ao processar sua solicitação: " + data.error);
+                    return { success: false, error: data.error };
+                }
+            } catch (error) {
+                console.error("Erro ao chamar a API do Google Apps Script:", error);
+                alert("Não foi possível conectar com a API do MindMate. Verifique sua conexão ou o URL da API.");
+                return { success: false, error: error.message };
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Processar com IA';
+            }
         }
 
-        function parseWithGemLogic(text) {
-            let currentText = text;
+        // Esta função é uma REPLICAÇÃO da lógica do Gem APENAS para fins de CONFIRMAÇÃO VISUAL no FRONTEND.
+        // O ideal é que a API do Apps Script retorne o objeto de classificação COMPLETO do Gem.
+        function parseLocallyForConfirmation(text, feedbackFromApi) {
+             let currentText = text;
             const tagsArray = currentText.match(/#\w+/g) || [];
             const tags = tagsArray.join(' ');
             currentText = currentText.replace(/#\w+/g, '').trim();
@@ -144,7 +176,7 @@
                 const targetDate = new Date(now);
                 if (keyword === 'amanhã') { targetDate.setDate(now.getDate() + 1); }
                 else if (keyword !== 'hoje') { 
-                    const currentDay = now.getDay() === 0 ? 7 : now.getDay();
+                    const currentDay = now.getDay() === 0 ? 7 : now.getDay(); // Sunday is 0, adjust for Monday start if needed
                     const targetDay = dayKeywords[keyword];
                     const diff = targetDay - currentDay + (targetDay <= currentDay ? 7 : 0);
                     targetDate.setDate(now.getDate() + diff);
@@ -155,7 +187,7 @@
             
             let tipo = 'tarefa';
             const lowerCaseText = currentText.toLowerCase();
-            const typeMatch = lowerCaseText.match(/^(diario|projeto|planner|tarefa):/);
+            const typeMatch = lowerCaseText.match(/^(diario|projeto|planner|tarefa|nota_ideia):/);
             if (typeMatch) {
                 tipo = typeMatch[1].toLowerCase();
                 currentText = currentText.substring(typeMatch[0].length).trim();
@@ -163,6 +195,7 @@
                  if (subtarefas.length > 0 || lowerCaseText.includes('projeto')) tipo = 'projeto';
                  else if (dataAgendada || horaAgendada) tipo = 'planner';
                  else if (/\b(sinto|senti|refletir|reflexão)\b/i.test(lowerCaseText)) tipo = 'diario';
+                 else tipo = 'nota_ideia'; // Default if no specific type is identified
             }
             
             const nome_atividade = currentText;
@@ -171,6 +204,7 @@
                 case 'planner': google_action_service = "GoogleCalendar"; break;
                 case 'projeto': google_action_service = "GoogleDocs"; break;
                 case 'diario': google_action_service = "GoogleKeep"; break;
+                case 'nota_ideia': google_action_service = "GoogleKeep"; break;
             }
 
             const properType = tipo.charAt(0).toUpperCase() + tipo.slice(1);
@@ -181,10 +215,11 @@
             };
         }
 
+
         // --- FUNÇÕES DE RENDERIZAÇÃO ---
         function getModuleFromTags(tags) {
             if(!tags) return 'default';
-            const tagArray = tags.split(' ');
+            const tagArray = tags.split(' ').map(tag => tag.trim());
             const modTag = tagArray.find(t => t.startsWith('#mod_'));
             if (!modTag) return 'default';
             const moduleKey = modTag.replace('#mod_', '');
@@ -214,11 +249,18 @@
              const contentContainer = document.getElementById('main-content');
              if(!tabsContainer || !contentContainer) return;
 
+             // Tabs: Inbox, Coach, Biblioteca, Projetos, Tarefas, Listas, Diário, Rituais, Análise, Revisão Semanal
              tabsContainer.innerHTML = `
-                <button onclick="setActiveTab('projects')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
-                <button onclick="setActiveTab('tasks')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
-                <button onclick="setActiveTab('planner')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Planner</button>
+                <button onclick="setActiveTab('inbox')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📥 Inbox</button>
+                <button onclick="setActiveTab('coach')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🤖 Coach</button>
+                <button onclick="setActiveTab('biblioteca')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📚 Biblioteca</button>
+                <button onclick="setActiveTab('projetos')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
+                <button onclick="setActiveTab('tarefas')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
+                <button onclick="setActiveTab('listas')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📝 Listas</button>
                 <button onclick="setActiveTab('diario')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
+                <button onclick="setActiveTab('rituais')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🕯️ Rituais</button>
+                <button onclick="setActiveTab('analise')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📊 Análise</button>
+                <button onclick="setActiveTab('revisao_semanal')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Revisão Semanal</button>
              `;
              
              document.querySelectorAll('.tab-button').forEach(btn => {
@@ -231,13 +273,74 @@
                 }
              });
 
+            // Conteúdo das abas (simplificado para demonstração)
+            let contentHtml = '';
             const typeMap = {
-                projects: 'Projeto',
-                tasks: 'Tarefa',
-                planner: 'Planner',
-                diario: 'Diario'
+                projetos: 'Projeto',
+                tarefas: 'Tarefa',
+                planner: 'Planner', // Planner é uma aba separada, mas também tem um tipo
+                diario: 'Diario',
+                inbox: 'Nota_ideia', // Usaremos Nota_ideia para o inbox por enquanto
+                listas: 'Lista', // Criaremos um tipo 'Lista' para este
+                rituais: 'Planner', // Rituais são planners com tag #type_personal_ritual
             };
-            renderList(contentContainer, typeMap[state.activeTab]);
+
+            if (typeMap[state.activeTab]) {
+                renderList(contentContainer, typeMap[state.activeTab]);
+            } else {
+                contentHtml = `<p class="text-gray-500 text-center py-8">Conteúdo para a aba '${state.activeTab}' ainda não implementado.</p>`;
+                contentContainer.innerHTML = contentHtml;
+            }
+
+            // Para Rituais, vamos filtrar por tags específicas
+            if (state.activeTab === 'rituais') {
+                 let items = state.allItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes('#type_personal_ritual'));
+                 if (state.currentFilter !== 'all') {
+                    items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+                }
+
+                if (items.length === 0) {
+                    contentContainer.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum ritual encontrado.</p>`;
+                    return;
+                }
+                let html = '<div class="space-y-3 pt-4">';
+                items.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    html += `
+                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
+<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
+                            <p class="text-xs text-gray-500"><span class="math-inline">\{classificacao\.hora\_agendada ? classificacao\.hora\_agendada \+ ' \- ' \: ''\}</span>{classificacao.tags}</p>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                contentContainer.innerHTML = html;
+            }
+             // Para Listas, vamos filtrar por tags específicas
+            if (state.activeTab === 'listas') {
+                let items = state.allItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes('#tag_compras')); // Exemplo: apenas listas de compras
+                if (state.currentFilter !== 'all') {
+                    items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+                }
+                if (items.length === 0) {
+                    contentContainer.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhuma lista encontrada.</p>`;
+                    return;
+                }
+                let html = '<div class="space-y-3 pt-4">';
+                items.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    html += `
+                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
+<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
+                            <p class="text-xs text-gray-500">${classificacao.tags}</p>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                contentContainer.innerHTML = html;
+            }
         }
         
         function renderList(container, type) {
@@ -255,8 +358,9 @@
                 const { classificacao } = item;
                 const module = getModuleFromTags(classificacao.tags);
                 html += `
-                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
-                        <p class="font-semibold">${classificacao.nome_atividade}</p>
+                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
+<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
+                        <p class="text-xs text-gray-500">${classificacao.tags || 'Nenhuma tag'}</p>
                     </div>
                 `;
              });
@@ -292,10 +396,10 @@
                 itemEl.innerHTML = `
                     <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
                     <label class="flex-grow">
-                        <span class="font-semibold">${classificacao.nome_atividade}</span>
-                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                        <span class="font-semibold"><span class="math-inline">\{classificacao\.nome\_atividade\}</span\>
+<span class\="text\-sm text\-gray\-500 ml\-2"\></span>{classsificacao.hora_agendada || ''}</span>
                     </label>
-                    <span class="w-3 h-3 rounded-full" style="background-color: var(--module-color-${module})"></span>`;
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${moduleConfig[module].color}"></span>`;
                 list.appendChild(itemEl);
             });
         }
@@ -314,155 +418,4 @@
                 const dayItems = state.allItems
                     .filter(item => {
                         if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
-                        const itemDate = new Date(item.classificacao.data_agendada + "T00:00:00");
-                        const itemDay = itemDate.toLocaleDateString('pt-BR', { weekday: 'long' });
-                        return itemDay.toLowerCase() === day.toLowerCase();
-                    })
-                    .sort((a,b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
-                
-                dayItems.forEach(item => {
-                    const {classificacao} = item;
-                    const module = getModuleFromTags(classificacao.tags);
-                    const itemEl = document.createElement('div');
-                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
-                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
-                    dayColumn.appendChild(itemEl);
-                });
-                plannerGrid.appendChild(dayColumn);
-            });
-        }
-        
-        function renderFilters() {
-            const filterContainer = document.getElementById('filter-container');
-            if (!filterContainer) return;
-            filterContainer.innerHTML = '';
-            const allButton = document.createElement('button');
-            allButton.textContent = 'Todos';
-            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
-            allButton.style.setProperty('--module-color', '#4b5563');
-            if (state.currentFilter === 'all') allButton.classList.add('active');
-            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
-            filterContainer.appendChild(allButton);
-
-            Object.entries(moduleConfig).forEach(([key, config]) => {
-                if (key === 'default') return;
-                const button = document.createElement('button');
-                button.innerHTML = `${config.icon} ${config.name}`;
-                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
-                button.style.setProperty('--module-color', config.color);
-                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
-                filterContainer.appendChild(button);
-            });
-        }
-        
-        function renderChart() {
-            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
-            if (moduleBalanceChart) {
-                moduleBalanceChart.destroy();
-            }
-
-            const moduleCounts = {};
-            Object.keys(moduleConfig).forEach(key => { if(key !== 'default') moduleCounts[key] = 0; });
-
-            state.allItems.forEach(item => {
-                const tags = item.classificacao.tags || '';
-                const modules = tags.match(/#mod_(\w+)/g) || [];
-                modules.forEach(mod => {
-                    const key = mod.replace('#mod_', '');
-                    if(moduleCounts.hasOwnProperty(key)) {
-                        moduleCounts[key]++;
-                    }
-                });
-            });
-
-            moduleBalanceChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
-                    datasets: [{
-                        data: Object.values(moduleCounts),
-                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
-                        borderColor: '#f8f7f4',
-                        borderWidth: 4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
-            });
-        }
-
-        // --- LÓGICA DO MODAL ---
-        window.openQuickAddModal = () => {
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
-            modalContent.innerHTML = `
-                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
-                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: planejar o novo site da empresa com subtarefas: alinhar design, desenvolver frontend, testar"></textarea>
-                <div class="mt-4 flex justify-end gap-2">
-                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
-                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
-                </div>
-            `;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.getElementById('quick-add-input').focus();
-            
-            document.getElementById('quick-add-submit').onclick = async () => {
-                const input = document.getElementById('quick-add-input').value.trim();
-                if(!input) return;
-                
-                state.gemResponse = await callMindMateGem(input);
-                renderConfirmationView();
-            };
-        };
-        
-        function renderConfirmationView() {
-            const modalContent = document.getElementById('modal-content');
-            const { classificacao, google_action } = state.gemResponse;
-             modalContent.innerHTML = `
-                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
-                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
-                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
-                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
-                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
-                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
-                    ${classificacao.data_agendada ? `<p><strong>Data:</strong> ${new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} ${classificacao.hora_agendada || ''}</p>` : ''}
-                    ${classificacao.subtarefas.length > 0 ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>` : ''}
-                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
-                </div>
-                <div class="mt-6 flex gap-4">
-                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
-                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
-                </div>
-             `;
-        }
-
-        window.confirmAction = () => {
-             console.log("AÇÃO CONFIRMADA: Enviando para API simulada:", state.gemResponse.google_action);
-             state.allItems.push(state.gemResponse);
-             renderAll();
-             alert(`Ação executada no ${state.gemResponse.google_action.service} (Simulado)`);
-             closeModal();
-        };
-        
-        window.closeModal = () => {
-            document.getElementById('modal').classList.add('hidden');
-        };
-
-        // --- INICIALIZAÇÃO ---
-        function main() {
-            state.allItems = [
-                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind #type_personal_ritual", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "07:00", status: 'Ativo'}},
-                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório", tipo: "Planner", tags: "#mod_work", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "09:00", status: 'Ativo'}},
-                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance", status: 'Ativo'}},
-                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose", status: 'Ativo'}},
-            ];
-            renderAll();
-            document.getElementById('loader-container').style.display = 'none';
-            document.getElementById('app').classList.remove('opacity-0');
-        }
-
-        main();
-
-    </script>
-</body>
-</html>
+                        const itemDate = new Date(item.classificacao
