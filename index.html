@@ -93,7 +93,8 @@
             allItems: [],
             modalOpen: false,
             gemResponse: null,
-            activeTab: 'projects',
+            apiFeedbackMessage: null, // Para guardar o feedback direto da API
+            activeTab: 'projetos', // Definindo uma aba inicial para garantir que algo apareça
             currentFilter: 'all',
         };
 
@@ -104,6 +105,7 @@
             work: { name: 'Trabalho', color: '#f97316', icon: '💼' },
             finance: { name: 'Finanças', color: '#8b5cf6', icon: '💰' },
             purpose: { name: 'Propósito', color: '#eab308', icon: '🧭' },
+            bridge: { name: 'Ponte', color: '#64748b', icon: '🌉' }, // Adicionado mod_bridge
             default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
         };
         
@@ -124,11 +126,9 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // O Google Apps Script retorna apenas o feedback da IA, 
-                    // mas para a confirmação no frontend, precisávamos de mais detalhes.
-                    // Idealmente, a API deveria retornar o objeto classificacao completo também.
-                    // POR ORA, vamos PARSEAR AQUI DE NOVO para mostrar na tela de confirmação.
-                    // FUTURAMENTE: A API do Apps Script deve retornar o 'gemResponse.classificacao' completo.
+                    // Aqui, a API do Apps Script só retorna o nome da atividade como feedback.
+                    // Para mostrar mais detalhes na tela de confirmação, ainda precisamos
+                    // re-parsear localmente. O ideal é que a API retorne o objeto completo de classificação.
                     const parsedForConfirmation = parseLocallyForConfirmation(text, data.feedback); 
                     return { success: true, gemResponse: parsedForConfirmation, feedback: data.feedback };
                 } else {
@@ -148,8 +148,9 @@
 
         // Esta função é uma REPLICAÇÃO da lógica do Gem APENAS para fins de CONFIRMAÇÃO VISUAL no FRONTEND.
         // O ideal é que a API do Apps Script retorne o objeto de classificação COMPLETO do Gem.
+        // Adaptada para ser mais robusta na extração das tags
         function parseLocallyForConfirmation(text, feedbackFromApi) {
-             let currentText = text;
+            let currentText = text;
             const tagsArray = currentText.match(/#\w+/g) || [];
             const tags = tagsArray.join(' ');
             currentText = currentText.replace(/#\w+/g, '').trim();
@@ -164,47 +165,96 @@
             let dataAgendada = null;
             let horaAgendada = null;
             const now = new Date();
-            const timeMatch = currentText.match(/às\s+(\d{1,2}:\d{2})/i);
+            // Tenta pegar hora (HH:MM)
+            const timeMatch = currentText.match(/(\d{1,2}:\d{2})(?:[ap]m)?/i);
              if (timeMatch) {
                 horaAgendada = timeMatch[1];
                 currentText = currentText.replace(timeMatch[0], '').trim();
             }
-            const dayKeywords = { 'hoje': 0, 'amanhã': 1, 'segunda': 1, 'terça': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sábado': 6, 'domingo': 0 };
-            const dateMatch = currentText.match(new RegExp(`(?:para|até|na|em)\\s+(${Object.keys(dayKeywords).join('|')})`, 'i'));
-            if (dateMatch) {
-                const keyword = dateMatch[1].toLowerCase();
-                const targetDate = new Date(now);
-                if (keyword === 'amanhã') { targetDate.setDate(now.getDate() + 1); }
-                else if (keyword !== 'hoje') { 
-                    const currentDay = now.getDay() === 0 ? 7 : now.getDay(); // Sunday is 0, adjust for Monday start if needed
-                    const targetDay = dayKeywords[keyword];
-                    const diff = targetDay - currentDay + (targetDay <= currentDay ? 7 : 0);
-                    targetDate.setDate(now.getDate() + diff);
+            
+            // Tenta pegar datas relativas ou dias da semana
+            const dayKeywords = { 'hoje': 0, 'amanhã': 1, 'domingo': 0, 'segunda': 1, 'terça': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sábado': 6 };
+            let foundDateKeyword = false;
+
+            for (const keyword of Object.keys(dayKeywords)) {
+                if (currentText.toLowerCase().includes(keyword)) {
+                    const targetDate = new Date(now);
+                    let dayOfWeek = dayKeywords[keyword];
+                    let currentDayOfWeek = now.getDay(); // 0 for Sunday, 1 for Monday, etc.
+
+                    if (keyword === 'hoje') {
+                        // Data já é hoje
+                    } else if (keyword === 'amanhã') {
+                        targetDate.setDate(now.getDate() + 1);
+                    } else {
+                        // Para dias da semana (segunda, terça, etc.)
+                        // Calcula a diferença de dias
+                        let diff = dayOfWeek - currentDayOfWeek;
+                        if (diff <= 0 && keyword !== 'domingo') { // Se o dia já passou esta semana, vai para a próxima semana
+                            diff += 7;
+                        } else if (keyword === 'domingo' && currentDayOfWeek !== 0) { // Se hoje não é domingo e quer domingo, vai para o próximo domingo
+                            diff = (7 - currentDayOfWeek) + dayOfWeek;
+                        }
+                        targetDate.setDate(now.getDate() + diff);
+                    }
+                    dataAgendada = targetDate.toISOString().split('T')[0];
+                    currentText = currentText.replace(new RegExp(keyword, 'i'), '').trim();
+                    foundDateKeyword = true;
+                    break;
                 }
-                dataAgendada = targetDate.toISOString().split('T')[0];
-                currentText = currentText.replace(dateMatch[0], '').trim();
             }
-            
-            let tipo = 'tarefa';
+
+            // Tenta pegar datas absolutas (ex: 15/06)
+            const absoluteDateMatch = currentText.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
+            if (absoluteDateMatch) {
+                let [day, month, year] = absoluteDateMatch[1].split('/');
+                if (!year) year = now.getFullYear().toString(); // Default to current year if not provided
+                
+                const parsedDate = new Date(`${month}/${day}/${year}`);
+                if (!isNaN(parsedDate)) {
+                    dataAgendada = parsedDate.toISOString().split('T')[0];
+                    currentText = currentText.replace(absoluteDateMatch[0], '').trim();
+                    foundDateKeyword = true;
+                }
+            }
+
+
+            let tipo = 'tarefa'; // Default type if not explicitly found
             const lowerCaseText = currentText.toLowerCase();
-            const typeMatch = lowerCaseText.match(/^(diario|projeto|planner|tarefa|nota_ideia):/);
-            if (typeMatch) {
-                tipo = typeMatch[1].toLowerCase();
-                currentText = currentText.substring(typeMatch[0].length).trim();
-            } else {
-                 if (subtarefas.length > 0 || lowerCaseText.includes('projeto')) tipo = 'projeto';
-                 else if (dataAgendada || horaAgendada) tipo = 'planner';
-                 else if (/\b(sinto|senti|refletir|reflexão)\b/i.test(lowerCaseText)) tipo = 'diario';
-                 else tipo = 'nota_ideia'; // Default if no specific type is identified
+
+            // Check for explicit type keywords
+            if (lowerCaseText.startsWith('diario:') || lowerCaseText.includes('diário:')) tipo = 'diario';
+            else if (lowerCaseText.startsWith('projeto:') || lowerCaseText.includes('projeto:')) tipo = 'projeto';
+            else if (lowerCaseText.startsWith('planner:') || lowerCaseText.includes('planner:')) tipo = 'planner';
+            else if (lowerCaseText.startsWith('tarefa:') || lowerCaseText.includes('tarefa:')) tipo = 'tarefa';
+            else if (lowerCaseText.startsWith('lista:') || lowerCaseText.includes('lista:')) tipo = 'lista';
+            else if (lowerCaseText.includes('ritual:')) tipo = 'planner'; // Rituais são tratados como planner para agendamento
+            else if (lowerCaseText.includes('hábito:')) tipo = 'planner'; // Hábitos são tratados como planner para agendamento
+
+            // Infer type based on other keywords/structure if no explicit type
+            if (tipo === 'tarefa') { // Only try to infer if it's still the default 'tarefa'
+                if (subtarefas.length > 0 || lowerCaseText.includes('projeto')) tipo = 'projeto';
+                else if (dataAgendada || horaAgendada) tipo = 'planner';
+                else if (/\b(sinto|senti|refletir|reflexão|insight)\b/i.test(lowerCaseText) || tags.includes('#emo_') || tags.includes('#emob_')) tipo = 'diario';
+                else if (lowerCaseText.includes('comprar') || lowerCaseText.includes('mercado') || tags.includes('#tag_compras')) tipo = 'lista';
+                else tipo = 'nota_ideia'; // Fallback for general notes
             }
             
-            const nome_atividade = currentText;
+            // Remove explicit type keywords from activity name
+            const typeKeywordsRegex = /^(diario|diário|projeto|planner|tarefa|lista):?\s*/i;
+            currentText = currentText.replace(typeKeywordsRegex, '').trim();
+
+
+            const nome_atividade = currentText || (feedbackFromApi ? feedbackFromApi.replace('MindMate: ', '').replace('registrada!', '').replace('registrado!', '').trim() : "Atividade sem nome");
+            
             let google_action_service = "GoogleTasks";
             switch(tipo) {
                 case 'planner': google_action_service = "GoogleCalendar"; break;
                 case 'projeto': google_action_service = "GoogleDocs"; break;
-                case 'diario': google_action_service = "GoogleKeep"; break;
-                case 'nota_ideia': google_action_service = "GoogleKeep"; break;
+                case 'diario': 
+                case 'nota_ideia': 
+                case 'lista': google_action_service = "GoogleKeep"; break; // Google Keep para diário/nota/lista
+                case 'tarefa': google_action_service = "GoogleTasks"; break;
             }
 
             const properType = tipo.charAt(0).toUpperCase() + tipo.slice(1);
@@ -249,7 +299,7 @@
              const contentContainer = document.getElementById('main-content');
              if(!tabsContainer || !contentContainer) return;
 
-             // Tabs: Inbox, Coach, Biblioteca, Projetos, Tarefas, Listas, Diário, Rituais, Análise, Revisão Semanal
+             // Abas MindMate completas, conforme documentação
              tabsContainer.innerHTML = `
                 <button onclick="setActiveTab('inbox')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📥 Inbox</button>
                 <button onclick="setActiveTab('coach')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🤖 Coach</button>
@@ -266,106 +316,82 @@
              document.querySelectorAll('.tab-button').forEach(btn => {
                 if (btn.textContent.toLowerCase().includes(state.activeTab)) {
                     btn.classList.add('active', 'border-blue-600', 'text-blue-600');
-                    btn.style.setProperty('--module-color', '#3b82f6');
+                    btn.style.setProperty('--module-color', '#3b82f6'); // Cor padrão para aba ativa
                 } else {
                     btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
                     btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
                 }
              });
 
-            // Conteúdo das abas (simplificado para demonstração)
+            // Lógica para renderizar o conteúdo de cada aba
             let contentHtml = '';
-            const typeMap = {
-                projetos: 'Projeto',
-                tarefas: 'Tarefa',
-                planner: 'Planner', // Planner é uma aba separada, mas também tem um tipo
-                diario: 'Diario',
-                inbox: 'Nota_ideia', // Usaremos Nota_ideia para o inbox por enquanto
-                listas: 'Lista', // Criaremos um tipo 'Lista' para este
-                rituais: 'Planner', // Rituais são planners com tag #type_personal_ritual
-            };
+            let filteredItems = [];
 
-            if (typeMap[state.activeTab]) {
-                renderList(contentContainer, typeMap[state.activeTab]);
+            switch(state.activeTab) {
+                case 'projetos':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'projeto');
+                    break;
+                case 'tarefas':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'tarefa');
+                    break;
+                case 'diario':
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'diario');
+                    break;
+                case 'inbox':
+                    // O inbox geralmente é para 'nota_ideia' ou o que não foi classificado
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'nota_ideia');
+                    break;
+                case 'listas':
+                    // Para listas, podemos filtrar por uma tag específica como #tag_compras ou um tipo 'lista'
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'lista' || (item.classificacao.tags && item.classificacao.tags.includes('#tag_compras')));
+                    break;
+                case 'rituais':
+                    // Rituais são planners com a tag #type_personal_ritual
+                    filteredItems = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === 'planner' && item.classificacao.tags && item.classificacao.tags.includes('#type_personal_ritual'));
+                    break;
+                case 'coach':
+                case 'biblioteca':
+                case 'analise':
+                case 'revisao_semanal':
+                    contentHtml = `<p class="text-gray-500 text-center py-8">Conteúdo para a aba '${state.activeTab}' ainda não implementado.</p>`;
+                    contentContainer.innerHTML = contentHtml;
+                    return; // Sai da função pois o conteúdo já foi definido
+            }
+
+            // Aplicar filtro de módulo se houver
+            if (state.currentFilter !== 'all') {
+                filteredItems = filteredItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+            }
+
+            if (filteredItems.length === 0) {
+                contentHtml = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${state.activeTab}' encontrado com os filtros atuais.</p>`;
             } else {
-                contentHtml = `<p class="text-gray-500 text-center py-8">Conteúdo para a aba '${state.activeTab}' ainda não implementado.</p>`;
-                contentContainer.innerHTML = contentHtml;
-            }
-
-            // Para Rituais, vamos filtrar por tags específicas
-            if (state.activeTab === 'rituais') {
-                 let items = state.allItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes('#type_personal_ritual'));
-                 if (state.currentFilter !== 'all') {
-                    items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
-                }
-
-                if (items.length === 0) {
-                    contentContainer.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum ritual encontrado.</p>`;
-                    return;
-                }
-                let html = '<div class="space-y-3 pt-4">';
-                items.forEach(item => {
+                contentHtml = '<div class="space-y-3 pt-4">';
+                filteredItems.forEach(item => {
                     const { classificacao } = item;
                     const module = getModuleFromTags(classificacao.tags);
-                    html += `
-                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
-<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
-                            <p class="text-xs text-gray-500"><span class="math-inline">\{classificacao\.hora\_agendada ? classificacao\.hora\_agendada \+ ' \- ' \: ''\}</span>{classificacao.tags}</p>
+                    const itemDate = classificacao.data_agendada ? new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}) : '';
+                    const itemTime = classificacao.hora_agendada || '';
+                    const dateTimeDisplay = (itemDate || itemTime) ? `<span class="text-sm text-gray-500 ml-2">${itemDate} ${itemTime}</span>` : '';
+
+                    let subtarefasDisplay = '';
+                    if (classificacao.subtarefas && classificacao.subtarefas.length > 0) {
+                        subtarefasDisplay = `<ul class="list-disc list-inside text-xs text-gray-500 mt-1">` +
+                                            classificacao.subtarefas.map(s => `<li>${s.texto}</li>`).join('') +
+                                            `</ul>`;
+                    }
+
+                    contentHtml += `
+                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                            <p class="font-semibold">${classificacao.nome_atividade} ${dateTimeDisplay}</p>
+                            <p class="text-xs text-gray-500">${classificacao.tags || 'Nenhuma tag'}</p>
+                            ${subtarefasDisplay}
                         </div>
                     `;
                 });
-                html += '</div>';
-                contentContainer.innerHTML = html;
+                contentHtml += '</div>';
             }
-             // Para Listas, vamos filtrar por tags específicas
-            if (state.activeTab === 'listas') {
-                let items = state.allItems.filter(item => item.classificacao.tags && item.classificacao.tags.includes('#tag_compras')); // Exemplo: apenas listas de compras
-                if (state.currentFilter !== 'all') {
-                    items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
-                }
-                if (items.length === 0) {
-                    contentContainer.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhuma lista encontrada.</p>`;
-                    return;
-                }
-                let html = '<div class="space-y-3 pt-4">';
-                items.forEach(item => {
-                    const { classificacao } = item;
-                    const module = getModuleFromTags(classificacao.tags);
-                    html += `
-                        <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
-<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
-                            <p class="text-xs text-gray-500">${classificacao.tags}</p>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                contentContainer.innerHTML = html;
-            }
-        }
-        
-        function renderList(container, type) {
-             let items = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === type.toLowerCase());
-             if (state.currentFilter !== 'all') {
-                items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
-            }
-
-             if (items.length === 0) {
-                 container.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${type}' encontrado.</p>`;
-                 return;
-             }
-             let html = '<div class="space-y-3 pt-4">';
-             items.forEach(item => {
-                const { classificacao } = item;
-                const module = getModuleFromTags(classificacao.tags);
-                html += `
-                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
-<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
-                        <p class="text-xs text-gray-500">${classificacao.tags || 'Nenhuma tag'}</p>
-                    </div>
-                `;
-             });
-             html += '</div>';
-             container.innerHTML = html;
+            contentContainer.innerHTML = contentHtml;
         }
         
         function renderTodaysFocus() {
@@ -378,9 +404,14 @@
             const todaysItems = state.allItems
                 .filter(item => {
                     const itemDateStr = item.classificacao.data_agendada;
-                    if (item.classificacao.tipo.toLowerCase() !== 'planner' || !itemDateStr) return false;
+                    // Foco do dia inclui planners (eventos, rituais, hábitos) e tarefas com data agendada para hoje.
+                    if (!itemDateStr) return false; 
                     const itemDate = new Date(itemDateStr + 'T00:00:00');
-                    return itemDate.getTime() === today.getTime();
+                    const isToday = itemDate.getTime() === today.getTime();
+                    
+                    const isPlannerOrTask = item.classificacao.tipo.toLowerCase() === 'planner' || item.classificacao.tipo.toLowerCase() === 'tarefa';
+                    
+                    return isToday && isPlannerOrTask;
                 })
                 .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
 
@@ -396,8 +427,8 @@
                 itemEl.innerHTML = `
                     <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
                     <label class="flex-grow">
-                        <span class="font-semibold"><span class="math-inline">\{classificacao\.nome\_atividade\}</span\>
-<span class\="text\-sm text\-gray\-500 ml\-2"\></span>{classsificacao.hora_agendada || ''}</span>
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
                     </label>
                     <span class="w-3 h-3 rounded-full" style="background-color: ${moduleConfig[module].color}"></span>`;
                 list.appendChild(itemEl);
@@ -408,9 +439,9 @@
             const plannerGrid = document.getElementById('planner-grid');
             if(!plannerGrid) return;
             plannerGrid.innerHTML = '';
-            const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']; // Ajustado para começar em Domingo (0)
             
-            days.forEach(day => {
+            days.forEach((day, index) => {
                 const dayColumn = document.createElement('div');
                 dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
                 dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
@@ -418,4 +449,175 @@
                 const dayItems = state.allItems
                     .filter(item => {
                         if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
-                        const itemDate = new Date(item.classificacao
+                        const itemDate = new Date(item.classificacao.data_agendada + "T00:00:00");
+                        // Ajusta para o dia da semana correto (0=Domingo, 1=Segunda, etc.)
+                        return itemDate.getDay() === index; 
+                    })
+                    .sort((a,b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+                
+                dayItems.forEach(item => {
+                    const {classificacao} = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
+                    dayColumn.appendChild(itemEl);
+                });
+                plannerGrid.appendChild(dayColumn);
+            });
+        }
+        
+        function renderFilters() {
+            const filterContainer = document.getElementById('filter-container');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+            const allButton = document.createElement('button');
+            allButton.textContent = 'Todos';
+            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
+            allButton.style.setProperty('--module-color', '#4b5563');
+            if (state.currentFilter === 'all') allButton.classList.add('active');
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
+            filterContainer.appendChild(allButton);
+
+            Object.entries(moduleConfig).forEach(([key, config]) => {
+                if (key === 'default') return;
+                const button = document.createElement('button');
+                button.innerHTML = `${config.icon} ${config.name}`;
+                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
+                button.style.setProperty('--module-color', config.color);
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
+                filterContainer.appendChild(button);
+            });
+        }
+        
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
+            }
+
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if(key !== 'default') moduleCounts[key] = 0; });
+
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if(moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
+                    }
+                });
+            });
+
+            moduleBalanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        // --- LÓGICA DO MODAL ---
+        window.openQuickAddModal = () => {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: planejar o novo site da empresa com subtarefas: alinhar design, desenvolver frontend, testar"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('quick-add-input').focus();
+            
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if(!input) return;
+                
+                const apiResult = await callMindMateGem(input);
+                if (apiResult.success) {
+                    state.gemResponse = apiResult.gemResponse; // Usar a versão localmente parseada para a confirmação
+                    state.apiFeedbackMessage = apiResult.feedback; // Guardar a mensagem de feedback da API para o alerta final
+                    renderConfirmationView();
+                } else {
+                    // Aqui você pode adicionar um feedback visual para o usuário sobre o erro
+                    // alert("Não foi possível processar a captura. Tente novamente.");
+                }
+            };
+        };
+        
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
+             modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${classificacao.data_agendada ? `<p><strong>Data:</strong> ${new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${classificacao.subtarefas.length > 0 ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>` : ''}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
+                </div>
+                <div class="mt-6 flex gap-4">
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
+                </div>
+             `;
+        }
+
+        window.confirmAction = async () => {
+             // Neste ponto, a ação no Google Workspace já foi iniciada pelo Apps Script
+             // O que fazemos no frontend é atualizar a visualização e dar o feedback ao usuário
+             console.log("AÇÃO CONFIRMADA: Google Apps Script já executou ou está executando.");
+             state.allItems.push(state.gemResponse); // Adiciona o item à lista local para exibição
+             renderAll(); // Atualiza o dashboard
+             alert(state.apiFeedbackMessage || "Ação executada com sucesso!"); // Mostra o feedback da API
+             closeModal();
+        };
+        
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+        };
+
+        // --- INICIALIZAÇÃO ---
+        function main() {
+            // Dados de exemplo para popular o dashboard
+            // Ajustado para refletir os tipos e tags esperados
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind #type_personal_ritual", data_agendada: today.toISOString().split('T')[0], hora_agendada: "07:00", status: 'Ativo'}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório Mensal", tipo: "Planner", tags: "#mod_work", data_agendada: today.toISOString().split('T')[0], hora_agendada: "09:00", status: 'Ativo'}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance #type_fixed", data_agendada: tomorrow.toISOString().split('T')[0], hora_agendada: null, status: 'Ativo'}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose #type_project", data_agendada: null, hora_agendada: null, subtarefas: [{texto: "Definir escopo", concluida: false}, {texto: "Design", concluida: false}], status: 'Ativo'}},
+                {classificacao: {id: '5', nome_atividade: "Lista de Compras da Semana", tipo: "Lista", tags: "#mod_family #tag_compras", data_agendada: null, hora_agendada: null, status: 'Ativo'}}, 
+                {classificacao: {id: '6', nome_atividade: "Reflexão sobre o dia", tipo: "Diario", tags: "#mod_mind #emo_reflexao", data_agendada: today.toISOString().split('T')[0], hora_agendada: "23:00", status: 'Ativo'}},
+                {classificacao: {id: '7', nome_atividade: "Idéia para novo projeto pessoal", tipo: "Nota_ideia", tags: "#mod_purpose", data_agendada: null, hora_agendada: null, status: 'Ativo'}},
+                {classificacao: {id: '8', nome_atividade: "Preparar apresentação", tipo: "Tarefa", tags: "#mod_work", data_agendada: today.toISOString().split('T')[0], hora_agendada: null, status: 'Ativo'}},
+            ];
+
+            renderAll();
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
+        }
+
+        main();
+
+    </script>
+</body>
+</html>
