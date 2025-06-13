@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindMate | Dashboard Integrado</title>
-    <!-- Paleta de Cores: Harmonia Terra & Céu -->
-    <!-- Estrutura da Aplicação: Esta versão reintroduz o layout funcional com base de dados, incluindo o Inbox e a Captura Assistida. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,94 +12,24 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8f7f4; /* Um branco-sujo suave */
-            color: #3a3a3a; /* Cinza escuro para o texto principal */
+            background-color: #f8f7f4;
+            color: #3a3a3a;
         }
-        /* Definição de cores dos módulos para reutilização no CSS */
-        .module-color-body { --module-color: #ef4444; }
-        .module-color-mind { --module-color: #3b82f6; }
-        .module-color-family { --module-color: #22c55e; }
-        .module-color-work { --module-color: #f97316; }
-        .module-color-finance { --module-color: #8b5cf6; }
-        .module-color-purpose { --module-color: #eab308; }
-        .module-color-bridge { --module-color: #64748b; }
-        .module-color-default { --module-color: #9ca3af; }
+        .module-color-body { --module-color: #ef4444; } .module-color-mind { --module-color: #3b82f6; }
+        .module-color-family { --module-color: #22c55e; } .module-color-work { --module-color: #f97316; }
+        .module-color-finance { --module-color: #8b5cf6; } .module-color-purpose { --module-color: #eab308; }
+        .module-color-bridge { --module-color: #64748b; } .module-color-default { --module-color: #9ca3af; }
 
-        .module-item-border {
-             border-left: 4px solid var(--module-color);
-        }
-        .planner-item, .list-item, .ritual-card {
-            transition: all 0.2s ease-in-out;
-        }
-        .planner-item:hover, .list-item:hover, .ritual-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-        .filter-button.active {
-            background-color: var(--module-color) !important;
-            color: white !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .tab-button.active {
-            border-bottom-color: var(--module-color);
-            color: var(--module-color);
-        }
-        .progress-bar-fill {
-            background-color: var(--module-color);
-            transition: width 0.5s ease-in-out;
-        }
-        .modal-content, .fab-menu {
-            animation: fadeIn 0.3s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .chart-container {
-            position: relative;
-            margin: auto;
-            height: 280px;
-            width: 100%;
-            max-width: 280px;
-        }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 320px;
-                max-width: 320px;
-            }
-        }
-        .checkin-emotion-btn.selected {
-            background-color: var(--module-color);
-            color: white;
-            font-weight: bold;
-        }
-        .today-item.completed {
-            text-decoration: line-through;
-            color: #9ca3af;
-        }
-        .coach-card, .template-card, .ritual-block {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        /* Estilo para o loader */
-        #loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .module-item-border { border-left: 4px solid var(--module-color); }
+        .planner-item, .list-item, .ritual-card { transition: all 0.2s ease-in-out; }
+        .planner-item:hover, .list-item:hover, .ritual-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .filter-button.active { background-color: var(--module-color) !important; color: white !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-button.active { border-bottom-color: var(--module-color); color: var(--module-color); }
+        #loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="antialiased">
-    <!-- Loader de Carregamento Inicial -->
     <div id="loader-container" class="fixed inset-0 bg-white/80 flex items-center justify-center z-[100]">
         <div class="text-center">
             <div id="loader" class="mx-auto"></div>
@@ -112,108 +40,56 @@
     <div id="app" class="container mx-auto p-4 md:p-8 opacity-0 transition-opacity duration-500">
         <header class="mb-8">
             <h1 class="text-4xl font-bold text-gray-800">MindMate Dashboard</h1>
-            <div class="flex items-center space-x-4">
-                 <p class="text-lg text-gray-500">Seu centro de comando para uma vida com intenção e clareza.</p>
-                 <span id="user-id-display" class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded"></span>
-            </div>
+            <p class="text-lg text-gray-500">Seu centro de comando para uma vida com intenção e clareza.</p>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 order-2 lg:order-1">
                  <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Foco do Dia</h2>
-                    <div id="today-focus-list" class="space-y-3">
-                        <!-- Itens de hoje serão preenchidos aqui -->
-                    </div>
+                    <div id="today-focus-list" class="space-y-3"></div>
                 </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
+                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Planner Semanal</h2>
-                    <div id="planner-grid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                        <!-- Os dias da semana serão preenchidos pelo JavaScript -->
-                    </div>
+                    <div id="planner-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
                 </div>
-
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                      <div class="border-b border-gray-200 mb-4">
-                        <nav class="-mb-px flex space-x-6 overflow-x-auto" id="main-tabs">
-                           <!-- As abas principais serão preenchidas aqui -->
-                        </nav>
+                        <nav class="-mb-px flex space-x-6 overflow-x-auto" id="main-tabs"></nav>
                     </div>
-                    <div id="main-content">
-                        <!-- O conteúdo das abas será preenchido aqui -->
-                    </div>
+                    <div id="main-content"></div>
                 </div>
             </div>
-
             <div class="lg:col-span-1 order-1 lg:order-2">
                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
                     <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Balanço dos Módulos</h3>
-                    <div class="chart-container">
-                        <canvas id="moduleBalanceChart"></canvas>
-                    </div>
+                    <div class="h-64"><canvas id="moduleBalanceChart"></canvas></div>
                 </div>
-
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <h3 class="text-xl font-bold text-gray-800 mb-4">Filtros</h3>
-                    <div id="filter-container" class="flex flex-wrap gap-2">
-                        <!-- Botões de filtro serão preenchidos pelo JavaScript -->
-                    </div>
+                    <div id="filter-container" class="flex flex-wrap gap-2"></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Floating Action Button -->
     <div id="fab-container" class="fixed bottom-8 right-8 z-40">
-        <button id="fab" onclick="openQuickAddModal()" class="w-16 h-16 bg-blue-600 rounded-full text-white flex items-center justify-center text-3xl shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110">
-            +
-        </button>
+        <button onclick="openQuickAddModal()" class="w-16 h-16 bg-blue-600 rounded-full text-white flex items-center justify-center text-3xl shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110">+</button>
     </div>
 
-    <!-- Modal -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div id="modal-content" class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8">
-            <!-- Conteúdo do modal será preenchido pelo JavaScript -->
-        </div>
+        <div id="modal-content" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8"></div>
     </div>
 
-    <!-- Firebase -->
     <script type="module">
-        // Importações do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-
-        // --- CONFIGURAÇÃO E ESTADO GLOBAL ---
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyDOOrp2DHGvzL0yYdXi_CSnXGZF-cCRuk8",
-            authDomain: "trusty-gradient-396719.firebaseapp.com",
-            projectId: "trusty-gradient-396719",
-            storageBucket: "trusty-gradient-396719.appspot.com",
-            messagingSenderId: "836217134758",
-            appId: "1:836217134758:web:eb7e47f422b7658e051e67",
-            measurementId: "G-LXD750NXE7"
-        };
-        const appId = "MindMate-Dashboard-v1";
-
-
-        let db, auth, userId;
-        let moduleBalanceChart, emotionsChart;
+        let moduleBalanceChart;
 
         const state = {
-            isAuthReady: false,
-            currentFilter: 'all',
-            activeTab: 'coach',
-            modalOpen: false,
-            activeItem: null,
             allItems: [],
-            libraryItems: [],
-            emotionLogs: [],
-            checkinStep: 0,
-            checkinData: { before_emo: null, before_emob: null, after_emo: null, after_emob: null, insight: '' }
+            modalOpen: false,
+            gemResponse: null,
+            activeTab: 'projects',
+            currentFilter: 'all',
         };
 
         const moduleConfig = {
@@ -223,114 +99,89 @@
             work: { name: 'Trabalho', color: '#f97316', icon: '💼' },
             finance: { name: 'Finanças', color: '#8b5cf6', icon: '💰' },
             purpose: { name: 'Propósito', color: '#eab308', icon: '🧭' },
-            bridge: { name: 'Ponte', color: '#64748b', icon: '🌉' },
             default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
         };
-        const emoTags = {
-            base: ['clareza', 'estresse', 'afeto', 'alegria', 'tristeza', 'confusao', 'conexao', 'presenca', 'visao', 'reflexao', 'energia', 'alivio'],
-            qualitative: {
-                positive: ['engajado', 'conectado', 'estavel', 'grato', 'inspirado', 'vibrante', 'enraizado'],
-                challenging: ['saturado', 'desenergizado', 'oscilante', 'impulsivo', 'pesado']
+        
+        // --- SIMULAÇÃO DA API E LÓGICA DO GEM ---
+        async function callMindMateGem(text) {
+            const submitBtn = document.getElementById('quick-add-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processando...';
+
+            const parsed = parseWithGemLogic(text);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Processar com IA';
+            return parsed;
+        }
+
+        function parseWithGemLogic(text) {
+            let currentText = text;
+            const tagsArray = currentText.match(/#\w+/g) || [];
+            const tags = tagsArray.join(' ');
+            currentText = currentText.replace(/#\w+/g, '').trim();
+
+            let subtarefas = [];
+            const subtaskMatch = currentText.match(/com subtarefas:(.*)/i);
+            if (subtaskMatch) {
+                subtarefas = subtaskMatch[1].split(',').map(s => ({ texto: s.trim(), concluida: false }));
+                currentText = currentText.substring(0, subtaskMatch.index).trim();
             }
-        };
-        const coachData = {
-            body: { title: "Módulo Corpo", questions: ["A que horas você costuma acordar e dormir?", "Seu corpo tem sinalizado algum desconforto?", "O que seu corpo pede mais: força, leveza ou mobilidade?"], suggestions: [ { title: "Protocolo Matinal", description: "Luz natural + água + movimento leve.", tags: "#mod_body #type_personal_ritual" } ] },
-            mind: { title: "Módulo Mente", questions: ["Você faz pausas mentais?", "Sua mente tem estado leve ou acelerada?"], suggestions: [ { title: "Escrita Livre Matinal", description: "Escrever 2 linhas livres sem julgamento.", tags: "#mod_mind #type_personal_ritual" } ] },
-            family: { title: "Módulo Família", questions: ["Tem compromissos fixos com sua família?", "Qual gesto de afeto acontece quase sempre?"], suggestions: [ { title: "Jantar Sem Ecrãs", description: "Uma refeição por semana sem dispositivos.", tags: "#mod_family #type_habit" } ] },
-            work: { title: "Módulo Trabalho", questions: ["Qual é a sua tarefa mais importante esta semana?", "Você reserva blocos de tempo para foco?"], suggestions: [ { title: "Definir as 3 Prioridades do Dia", description: "Antes de começar, listar as 3 tarefas mais importantes.", tags: "#mod_work #type_habit" } ] },
-            finance: { title: "Módulo Finanças", questions: ["Qual é sua principal prioridade financeira?", "Você revisa seus gastos com que frequência?"], suggestions: [{ title: "Revisão Financeira Semanal", description: "Dedicar 20 min para categorizar despesas.", tags: "#mod_finance #type_recurring" }] },
-            purpose: { title: "Módulo Propósito", questions: ["O que te deu mais energia esta semana?", "Qual pequena ação te aproxima da sua visão de futuro?"], suggestions: [{ title: "Revisão Semanal", description: "Refletir sobre o que funcionou e aprendeu.", tags: "#mod_purpose #type_personal_ritual" }] },
-        };
 
-        // --- INICIALIZAÇÃO DO FIREBASE E AUTENTICAÇÃO ---
-        
-        async function initializeFirebase() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                const analytics = getAnalytics(app);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        state.isAuthReady = true;
-                        document.getElementById('user-id-display').textContent = `ID Usuário: ${userId.substring(0,8)}...`;
-                        setupRealtimeListeners();
-                        hideLoader();
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                });
-            } catch (error) {
-                console.error("Erro ao inicializar Firebase:", error);
-                document.getElementById('loader').innerHTML = `<p class="text-red-500">Erro de Configuração. Verifique os dados do Firebase.</p>`;
+            let dataAgendada = null;
+            let horaAgendada = null;
+            const now = new Date();
+            const timeMatch = currentText.match(/às\s+(\d{1,2}:\d{2})/i);
+             if (timeMatch) {
+                horaAgendada = timeMatch[1];
+                currentText = currentText.replace(timeMatch[0], '').trim();
             }
-        }
-        
-        
-        // --- FUNÇÕES DE INTERAÇÃO COM A BASE DE DADOS (FIRESTORE) ---
-
-        function setupRealtimeListeners() {
-            if (!state.isAuthReady) return;
-
-            const itensCollectionPath = `artifacts/${appId}/users/${userId}/itens`;
-            onSnapshot(collection(db, itensCollectionPath), (snapshot) => {
-                state.allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAll();
-            });
-
-            const bibliotecaCollectionPath = `artifacts/${appId}/public/data/biblioteca`;
-             onSnapshot(collection(db, bibliotecaCollectionPath), (snapshot) => {
-                state.libraryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (state.libraryItems.length === 0) addDefaultLibraryItems();
-                if (state.activeTab === 'library') renderLibrary(document.getElementById('main-content'));
-            });
-
-            const logEmocoesCollectionPath = `artifacts/${appId}/users/${userId}/log_emocoes`;
-            onSnapshot(collection(db, logEmocoesCollectionPath), (snapshot) => {
-                state.emotionLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                 if (state.activeTab === 'analysis') updateEmotionsChart();
-            });
-        }
-        
-        async function addNovoItem(itemObject) {
-            const itensCollectionPath = `artifacts/${appId}/users/${userId}/itens`;
-            try {
-                await addDoc(collection(db, itensCollectionPath), { ...itemObject, Data_Criacao: serverTimestamp() });
-            } catch (error) { console.error("Erro ao adicionar novo item:", error); }
-        }
-        
-        async function updateItem(itemId, dataToUpdate) {
-            const itemDocPath = `artifacts/${appId}/users/${userId}/itens/${itemId}`;
-             try {
-                await updateDoc(doc(db, itemDocPath), dataToUpdate);
-            } catch (error) { console.error("Erro ao atualizar item:", error); }
-        }
-
-        async function addLogEmocao(logObject) {
-            const logCollectionPath = `artifacts/${appId}/users/${userId}/log_emocoes`;
-             try {
-                await addDoc(collection(db, logCollectionPath), { ...logObject, Timestamp: serverTimestamp() });
-            } catch (error) { console.error("Erro ao adicionar log de emoção:", error); }
-        }
-        
-        async function addDefaultLibraryItems() {
-            const libraryPath = `artifacts/${appId}/public/data/biblioteca`;
-            const defaultTemplates = [
-                { Titulo: "Modelo: Weekly Review", Descricao: "Template para a revisão semanal simbólica.", Tags: "#mod_purpose #type_personal_ritual #lib_ritual", Conteudo_Template: "diario: Revisão Semanal - (DATA) #mod_purpose #needs_checkin. Insight da semana: "},
-                { Titulo: "Modelo: Novo Projeto", Descricao: "Estrutura base para iniciar qualquer novo projeto.", Tags: "#mod_work #lib_modelo_projeto", Conteudo_Template: "projeto: (NOME DO PROJETO) #mod_work #type_project. Subtarefas: Pesquisa, Escopo, Execução, Revisão."},
-                { Titulo: "Ritual: Encerramento do Dia", Descricao: "Protocolo para desligar do trabalho e conectar com a noite.", Tags: "#mod_mind #lib_ritual", Conteudo_Template: "planner: Ritual de Encerramento do Dia #mod_mind #type_personal_ritual #needs_checkin às 21:30"}
-            ];
-            for (const template of defaultTemplates) {
-                try {
-                    await addDoc(collection(db, libraryPath), template);
-                } catch(e){ console.error("Erro ao adicionar template padrão:", e); }
+            const dayKeywords = { 'hoje': 0, 'amanhã': 1, 'segunda': 1, 'terça': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sábado': 6, 'domingo': 0 };
+            const dateMatch = currentText.match(new RegExp(`(?:para|até|na|em)\\s+(${Object.keys(dayKeywords).join('|')})`, 'i'));
+            if (dateMatch) {
+                const keyword = dateMatch[1].toLowerCase();
+                const targetDate = new Date(now);
+                if (keyword === 'amanhã') { targetDate.setDate(now.getDate() + 1); }
+                else if (keyword !== 'hoje') { 
+                    const currentDay = now.getDay() === 0 ? 7 : now.getDay();
+                    const targetDay = dayKeywords[keyword];
+                    const diff = targetDay - currentDay + (targetDay <= currentDay ? 7 : 0);
+                    targetDate.setDate(now.getDate() + diff);
+                }
+                dataAgendada = targetDate.toISOString().split('T')[0];
+                currentText = currentText.replace(dateMatch[0], '').trim();
             }
+            
+            let tipo = 'tarefa';
+            const lowerCaseText = currentText.toLowerCase();
+            const typeMatch = lowerCaseText.match(/^(diario|projeto|planner|tarefa):/);
+            if (typeMatch) {
+                tipo = typeMatch[1].toLowerCase();
+                currentText = currentText.substring(typeMatch[0].length).trim();
+            } else {
+                 if (subtarefas.length > 0 || lowerCaseText.includes('projeto')) tipo = 'projeto';
+                 else if (dataAgendada || horaAgendada) tipo = 'planner';
+                 else if (/\b(sinto|senti|refletir|reflexão)\b/i.test(lowerCaseText)) tipo = 'diario';
+            }
+            
+            const nome_atividade = currentText;
+            let google_action_service = "GoogleTasks";
+            switch(tipo) {
+                case 'planner': google_action_service = "GoogleCalendar"; break;
+                case 'projeto': google_action_service = "GoogleDocs"; break;
+                case 'diario': google_action_service = "GoogleKeep"; break;
+            }
+
+            const properType = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+
+            return {
+                classificacao: { id: `item_${Date.now()}`, nome_atividade, tipo: properType, tags, data_agendada: dataAgendada, hora_agendada: horaAgendada, subtarefas, status: 'Ativo' },
+                google_action: { service: google_action_service }
+            };
         }
 
-        // --- LÓGICA PRINCIPAL DA APLICAÇÃO ---
-        
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
         function getModuleFromTags(tags) {
             if(!tags) return 'default';
             const tagArray = tags.split(' ');
@@ -341,51 +192,140 @@
         }
 
         function renderAll() {
-            if (!state.isAuthReady) return;
             renderFilters();
             renderPlanner();
             renderMainContent();
             renderTodaysFocus();
-            updateChart();
+            if(document.getElementById('moduleBalanceChart')) renderChart();
         }
 
         window.setActiveTab = (tabName) => {
             state.activeTab = tabName;
             renderMainContent();
         }
-        
+
         window.setFilter = (moduleKey) => {
             state.currentFilter = moduleKey;
             renderAll();
         }
         
+        function renderMainContent() {
+             const tabsContainer = document.getElementById('main-tabs');
+             const contentContainer = document.getElementById('main-content');
+             if(!tabsContainer || !contentContainer) return;
+
+             tabsContainer.innerHTML = `
+                <button onclick="setActiveTab('projects')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
+                <button onclick="setActiveTab('tasks')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
+                <button onclick="setActiveTab('planner')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Planner</button>
+                <button onclick="setActiveTab('diario')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
+             `;
+             
+             document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(state.activeTab)) {
+                    btn.classList.add('active', 'border-blue-600', 'text-blue-600');
+                    btn.style.setProperty('--module-color', '#3b82f6');
+                } else {
+                    btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+                }
+             });
+
+            const typeMap = {
+                projects: 'Projeto',
+                tasks: 'Tarefa',
+                planner: 'Planner',
+                diario: 'Diario'
+            };
+            renderList(contentContainer, typeMap[state.activeTab]);
+        }
+        
+        function renderList(container, type) {
+             let items = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === type.toLowerCase());
+             if (state.currentFilter !== 'all') {
+                items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+            }
+
+             if (items.length === 0) {
+                 container.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${type}' encontrado.</p>`;
+                 return;
+             }
+             let html = '<div class="space-y-3 pt-4">';
+             items.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                html += `
+                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                        <p class="font-semibold">${classificacao.nome_atividade}</p>
+                    </div>
+                `;
+             });
+             html += '</div>';
+             container.innerHTML = html;
+        }
+        
+        function renderTodaysFocus() {
+            const list = document.getElementById('today-focus-list');
+            if(!list) return;
+            list.innerHTML = '';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todaysItems = state.allItems
+                .filter(item => {
+                    const itemDateStr = item.classificacao.data_agendada;
+                    if (item.classificacao.tipo.toLowerCase() !== 'planner' || !itemDateStr) return false;
+                    const itemDate = new Date(itemDateStr + 'T00:00:00');
+                    return itemDate.getTime() === today.getTime();
+                })
+                .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+            if(todaysItems.length === 0) {
+                list.innerHTML = `<p class="text-gray-500">Nenhuma atividade agendada para hoje.</p>`;
+                return;
+            }
+            todaysItems.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                const itemEl = document.createElement('div');
+                itemEl.className = `today-item flex items-center p-3 rounded-lg bg-white`;
+                itemEl.innerHTML = `
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
+                    <label class="flex-grow">
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                    </label>
+                    <span class="w-3 h-3 rounded-full" style="background-color: var(--module-color-${module})"></span>`;
+                list.appendChild(itemEl);
+            });
+        }
+
         function renderPlanner() {
             const plannerGrid = document.getElementById('planner-grid');
             if(!plannerGrid) return;
             plannerGrid.innerHTML = '';
             const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
             
-            const plannerItems = state.allItems.filter(item => item.Tipo === 'Planner');
-            const filteredData = state.currentFilter === 'all' 
-                ? plannerItems 
-                : plannerItems.filter(item => item.Tags && item.Tags.includes(`#mod_${state.currentFilter}`));
-            
             days.forEach(day => {
                 const dayColumn = document.createElement('div');
-                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[200px]';
+                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
                 dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
                 
-                const itemsForDay = filteredData
-                    .filter(item => item.Data_Agendada === day)
-                    .sort((a, b) => (a.Hora_Agendada || '').localeCompare(b.Hora_Agendada || ''));
+                const dayItems = state.allItems
+                    .filter(item => {
+                        if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
+                        const itemDate = new Date(item.classificacao.data_agendada + "T00:00:00");
+                        const itemDay = itemDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+                        return itemDay.toLowerCase() === day.toLowerCase();
+                    })
+                    .sort((a,b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
                 
-                itemsForDay.forEach(item => {
-                    const module = getModuleFromTags(item.Tags);
-                    const checkinCompleteIcon = item.Checkin_JSON && item.Checkin_JSON.after_emo ? '✅' : '';
+                dayItems.forEach(item => {
+                    const {classificacao} = item;
+                    const module = getModuleFromTags(classificacao.tags);
                     const itemEl = document.createElement('div');
                     itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
-                    itemEl.innerHTML = `<p class="font-semibold text-sm text-gray-800">${item.Nome_Atividade} <span class="text-xs">${checkinCompleteIcon}</span></p><p class="text-xs text-gray-500">${item.Hora_Agendada || ''}</p>`;
-                    itemEl.addEventListener('click', () => openModal(item.id));
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
                     dayColumn.appendChild(itemEl);
                 });
                 plannerGrid.appendChild(dayColumn);
@@ -401,7 +341,7 @@
             allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
             allButton.style.setProperty('--module-color', '#4b5563');
             if (state.currentFilter === 'all') allButton.classList.add('active');
-            allButton.addEventListener('click', () => setFilter('all'));
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
             filterContainer.appendChild(allButton);
 
             Object.entries(moduleConfig).forEach(([key, config]) => {
@@ -410,813 +350,118 @@
                 button.innerHTML = `${config.icon} ${config.name}`;
                 button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
                 button.style.setProperty('--module-color', config.color);
-                button.addEventListener('click', () => setFilter(key));
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
                 filterContainer.appendChild(button);
             });
         }
         
-        function renderMainContent() {
-            const tabsContainer = document.getElementById('main-tabs');
-            const contentContainer = document.getElementById('main-content');
-            if (!tabsContainer || !contentContainer) return;
-
-            tabsContainer.innerHTML = `
-                <button onclick="setActiveTab('inbox')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📥 Inbox</button>
-                <button onclick="setActiveTab('rituals')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🕯️ Rituais</button>
-                <button onclick="setActiveTab('review')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Revisão</button>
-                <button onclick="setActiveTab('analysis')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📊 Análise</button>
-                <button onclick="setActiveTab('coach')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🤖 Coach</button>
-                <button onclick="setActiveTab('library')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📚 Biblioteca</button>
-                <button onclick="setActiveTab('projects')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
-                <button onclick="setActiveTab('tasks')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
-                <button onclick="setActiveTab('journal')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
-            `;
-            
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                const btnText = btn.textContent.toLowerCase();
-                if (btnText.includes(state.activeTab)) {
-                    btn.classList.add('active', 'border-gray-800', 'text-gray-800');
-                    btn.style.setProperty('--module-color', '#3a3a3a');
-                } else {
-                    btn.classList.remove('active', 'border-gray-800', 'text-gray-800');
-                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                }
-            });
-            
-            const renderMap = {
-                inbox: (container) => renderList(container, 'Tarefa', ['Inbox']),
-                projects: (container) => renderList(container, 'Projeto', ['Ativo']),
-                tasks: (container) => renderList(container, 'Tarefa', ['Ativo', 'Pendente']),
-                journal: (container) => renderList(container, 'Diario', ['Ativo']),
-                coach: renderCoach,
-                review: renderWeeklyReview,
-                library: renderLibrary,
-                analysis: renderAnalysis,
-                rituals: renderRituals
-            };
-            if(renderMap[state.activeTab]) {
-                renderMap[state.activeTab](contentContainer);
-            }
-        }
-
-        function renderList(container, type, statuses) {
-            let items = state.allItems
-                .filter(item => (Array.isArray(type) ? type.includes(item.Tipo) : item.Tipo === type) && statuses.includes(item.Status))
-                .sort((a,b) => (b.Data_Criacao?.seconds || 0) - (a.Data_Criacao?.seconds || 0));
-
-             if (state.currentFilter !== 'all') {
-                items = items.filter(item => item.Tags && item.Tags.includes(`#mod_${state.currentFilter}`));
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
             }
 
-            if (items.length === 0) {
-                 const typeName = Array.isArray(type) ? 'itens' : type;
-                container.innerHTML = `<div class="text-center py-10"><p class="text-gray-500">Nenhum item do tipo '${typeName}' encontrado nos estados '${statuses.join(', ')}'.</p></div>`;
-                return;
-            }
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if(key !== 'default') moduleCounts[key] = 0; });
 
-            let html = '<div class="space-y-3 pt-4">';
-            items.forEach(item => {
-                const module = getModuleFromTags(item.Tags);
-                const title = item.Nome_Atividade;
-                const progress = item.Tipo === 'Projeto' ? calculateProgress(item.Subtarefas_JSON) : -1;
-                
-                html += `
-                    <div onclick="openModal('${item.id}')" class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
-                        <div class="flex justify-between items-center">
-                            <p class="font-semibold text-gray-800">${title}</p>
-                            ${module !== 'default' ? `<span class="text-xs font-semibold px-2 py-1 rounded-full text-white" style="background-color: ${moduleConfig[module].color};">${moduleConfig[module].name}</span>` : ''}
-                        </div>
-                        ${progress >= 0 ? `
-                            <div class="mt-2">
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="progress-bar-fill h-2 rounded-full module-color-${module}" style="width: ${progress}%;"></div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function calculateProgress(subtasks_json) {
-            if (!subtasks_json || subtasks_json.length === 0) return 0;
-            const completed = subtasks_json.filter(s => s.concluida).length;
-            return (completed / subtasks_json.length) * 100;
-        }
-
-        function renderTodaysFocus() {
-            const list = document.getElementById('today-focus-list');
-            if(!list) return;
-            list.innerHTML = '';
-            const todayStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long' }).charAt(0).toUpperCase() + new Date().toLocaleDateString('pt-BR', { weekday: 'long' }).slice(1);
-            
-            const todaysItems = state.allItems
-                .filter(item => item.Tipo === 'Planner' && item.Data_Agendada === todayStr)
-                .sort((a, b) => (a.Hora_Agendada || '').localeCompare(b.Hora_Agendada || ''));
-
-            if(todaysItems.length === 0) {
-                list.innerHTML = `<p class="text-gray-500">Nenhuma atividade agendada para hoje.</p>`;
-                return;
-            }
-            todaysItems.forEach(item => {
-                const module = getModuleFromTags(item.Tags);
-                const isCompleted = item.Status === 'Concluído';
-                const itemEl = document.createElement('div');
-                itemEl.className = `today-item flex items-center p-3 rounded-lg ${isCompleted ? 'bg-gray-50 text-gray-400' : 'bg-white'}`;
-                itemEl.innerHTML = `
-                    <input type="checkbox" id="today-${item.id}" class="h-5 w-5 rounded border-gray-300 mr-4" onchange="toggleTodayItem('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''}>
-                    <label for="today-${item.id}" class="flex-grow ${isCompleted ? 'line-through' : ''}">
-                        <span class="font-semibold">${item.Nome_Atividade}</span>
-                        <span class="text-sm text-gray-500 ml-2">${item.Hora_Agendada || ''}</span>
-                    </label>
-                    <span class="w-3 h-3 rounded-full" style="background-color: ${moduleConfig[module].color}"></span>`;
-                list.appendChild(itemEl);
-            });
-        }
-        
-        window.toggleTodayItem = (itemId, isChecked) => {
-            const newStatus = isChecked ? 'Concluído' : 'Ativo';
-            updateItem(itemId, { Status: newStatus });
-        };
-        
-         function renderCoach(container) {
-            let html = '<div class="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
-            Object.entries(coachData).forEach(([key, data]) => {
-                const config = moduleConfig[key];
-                html += `
-                    <div class="coach-card p-5 rounded-xl module-color-${key}" style="background-color: ${config.color}20;">
-                        <h4 class="text-lg font-bold text-gray-800 mb-3">${config.icon} ${data.title}</h4>
-                        <p class="text-sm text-gray-600 mb-4 font-semibold italic">"${data.questions[0]}"</p>
-                        <details>
-                            <summary class="text-sm font-semibold cursor-pointer text-gray-700">Ver sugestões</summary>
-                            <div class="mt-3 space-y-2">
-                                ${data.suggestions.map(sugg => `
-                                    <div class="p-2 bg-white/50 rounded-md text-sm">
-                                        <p class="font-semibold">${sugg.title}</p>
-                                        <p class="text-xs text-gray-600">${sugg.description}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </details>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function renderWeeklyReview(container) {
-            const plannerItems = state.allItems.filter(i => i.Tipo === 'Planner');
-            container.innerHTML = `<div class="pt-4 space-y-8">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">1. Coleta e Consciência</h3>
-                    <p class="text-gray-600 mb-4">Um resumo do que aconteceu esta semana.</p>
-                    <ul class="list-disc list-inside space-y-1">
-                        <li><strong>${plannerItems.filter(i => i.Status === 'Concluído').length}</strong> atividades do planner concluídas.</li>
-                        <li><strong>${state.emotionLogs.filter(log => log.Checkin_Tipo === 'AFTER').length}</strong> check-ins emocionais realizados.</li>
-                        <li><strong>${state.allItems.filter(i=> i.Status === 'Inbox').length}</strong> itens no seu Inbox.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">2. Reflexão Guiada</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block font-medium text-gray-700">O que funcionou bem esta semana? Qual foi o seu maior ganho?</label>
-                            <textarea class="mt-1 w-full p-2 border rounded-lg bg-gray-50" rows="3"></textarea>
-                        </div>
-                        <div>
-                            <label class="block font-medium text-gray-700">Qual foi o maior desafio? O que você gostaria de deixar para trás?</label>
-                            <textarea class="mt-1 w-full p-2 border rounded-lg bg-gray-50" rows="3"></textarea>
-                        </div>
-                    </div>
-                </div>
-                 <div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">3. Planeamento Intencional</h3>
-                    <div>
-                        <label class="block font-medium text-gray-700">Qual será sua "emoção guia" ou foco simbólico para a próxima semana?</label>
-                        <input type="text" class="mt-1 w-full p-2 border rounded-lg bg-gray-50" placeholder="Ex: #emo_clareza, #emob_engajado...">
-                    </div>
-                </div>
-                <button class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Finalizar Revisão e Arquivar</button>
-            </div>`;
-        }
-        
-        function renderLibrary(container) {
-            let html = '<div class="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">';
-            if (state.libraryItems.length === 0) {
-                 html += '<p class="text-gray-500 col-span-2 text-center">A sua biblioteca está vazia. Templates padrão serão adicionados em breve.</p>';
-            }
-            state.libraryItems.forEach(item => {
-                const module = getModuleFromTags(item.Tags);
-                const config = moduleConfig[module] || moduleConfig.default;
-                html += `
-                    <div class="template-card p-4 rounded-lg shadow-sm module-color-${module}" style="background-color: ${config.color}20;">
-                         <p class="font-bold text-gray-800">${config.icon} ${item.Titulo}</p>
-                         <p class="text-sm text-gray-600 mb-3">${item.Descricao}</p>
-                         <button onclick="useTemplate('${item.id}')" class="text-sm font-semibold py-1 px-3 rounded-full text-white hover:opacity-90" style="background-color: ${config.color};">Usar este Modelo</button>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function renderAnalysis(container) {
-            container.innerHTML = `<div class="pt-4 space-y-8">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">Tendências Emocionais (#emob)</h3>
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <canvas id="emotionsChart"></canvas>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-3">Mapa de Conexões (#mod_bridge)</h3>
-                    <div id="bridge-list" class="space-y-3"></div>
-                </div>
-            </div>`;
-            createEmotionsChart();
-            updateEmotionsChart();
-            renderBridgeList();
-        }
-
-        function renderBridgeList() {
-            const listContainer = document.getElementById('bridge-list');
-            if(!listContainer) return;
-            const bridgeItems = state.allItems.filter(item => item.Tags && item.Tags.includes('#mod_bridge'));
-            if(bridgeItems.length === 0) {
-                listContainer.innerHTML = `<p class="text-gray-500">Nenhum item de ponte encontrado.</p>`;
-                return;
-            }
-            let html = '';
-            bridgeItems.forEach(item => {
-                const title = item.Nome_Atividade;
-                const modules = item.Tags.split(' ').filter(t => t.startsWith('#mod_') && t !== '#mod_bridge').map(t => {
-                    const modKey = t.replace('#mod_', '');
-                    const config = moduleConfig[modKey] || {color: 'grey', name: modKey};
-                    return `<span class="text-xs font-semibold px-2 py-1 rounded-full text-white" style="background-color: ${config.color};">${config.name}</span>`;
-                }).join(' → ');
-
-                html += `<div class="p-3 rounded-lg bg-gray-100">
-                    <p class="font-semibold text-gray-800">${title}</p>
-                    <p class="text-sm text-gray-600 mt-1">Conectando: ${modules}</p>
-                </div>`;
-            });
-            listContainer.innerHTML = html;
-        }
-        
-        function renderRituals(container) {
-            const rituals = state.allItems.filter(item => item.Tags && item.Tags.includes('#type_personal_ritual') && item.Status === 'Ativo');
-            
-            const manha = [];
-            const tarde = [];
-            const noite = [];
-
-            rituals.forEach(item => {
-                if (item.Hora_Agendada) {
-                    const hora = parseInt(item.Hora_Agendada.split(':')[0]);
-                    if (hora < 12) {
-                        manha.push(item);
-                    } else if (hora >= 12 && hora < 18) {
-                        tarde.push(item);
-                    } else {
-                        noite.push(item);
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if(moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
                     }
-                } else {
-                    noite.push(item); // Rituais sem hora vão para a noite por defeito
-                }
+                });
             });
 
-            const renderBlock = (title, items) => {
-                let itemsHtml = '<p class="text-sm text-gray-500">Nenhum ritual definido.</p>';
-                if (items.length > 0) {
-                    itemsHtml = items.map(item => {
-                        const module = getModuleFromTags(item.Tags);
-                        const config = moduleConfig[module];
-                        return `
-                            <div onclick="openModal('${item.id}')" class="ritual-card cursor-pointer p-4 rounded-lg bg-white/60 shadow-sm module-item-border module-color-${module}">
-                                <p class="font-semibold">${item.Nome_Atividade}</p>
-                                <p class="text-xs text-gray-500">${item.Hora_Agendada || 'Sem hora'}</p>
-                            </div>
-                        `;
-                    }).join('');
-                }
-
-                return `
-                    <div class="ritual-block flex-1 p-5 rounded-xl">
-                        <h4 class="text-2xl font-bold text-gray-800 mb-4">${title}</h4>
-                        <div class="space-y-3">${itemsHtml}</div>
-                    </div>
-                `;
-            };
-
-            container.innerHTML = `
-                <div class="pt-4 flex flex-col md:flex-row gap-6">
-                    ${renderBlock('☀️ Manhã', manha.sort((a,b) => (a.Hora_Agendada || '').localeCompare(b.Hora_Agendada || '')))}
-                    ${renderBlock('🌙 Tarde', tarde.sort((a,b) => (a.Hora_Agendada || '').localeCompare(b.Hora_Agendada || '')))}
-                    ${renderBlock('🦉 Noite', noite.sort((a,b) => (a.Hora_Agendada || '').localeCompare(b.Hora_Agendada || '')))}
-                </div>
-            `;
-        }
-
-
-        // --- LÓGICA DOS GRÁFICOS ---
-        function createChart() {
-            const ctx = document.getElementById('moduleBalanceChart')?.getContext('2d');
-            if(!ctx) return;
             moduleBalanceChart = new Chart(ctx, {
                 type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: '#f8f7f4', borderWidth: 4, hoverOffset: 10 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, tooltip: { enabled: true, backgroundColor: '#3a3a3a', callbacks: { label: (c) => `${c.label}: ${c.parsed} item(ns)` } } } }
-            });
-        }
-        
-        function updateChart() {
-            if(!moduleBalanceChart) return;
-            const moduleCounts = {};
-            Object.keys(moduleConfig).forEach(key => { if (key !== 'default') moduleCounts[key] = 0; });
-            
-            state.allItems.forEach(item => {
-                 if (!item.Tags) return;
-                 const modules = item.Tags.split(' ').filter(t => t.startsWith('#mod_'));
-                 modules.forEach(modTag => {
-                    const module = modTag.replace('#mod_', '');
-                    if (moduleCounts.hasOwnProperty(module)) moduleCounts[module]++;
-                 });
-            });
-
-            moduleBalanceChart.data.labels = Object.keys(moduleCounts).map(key => moduleConfig[key].name);
-            moduleBalanceChart.data.datasets[0].data = Object.values(moduleCounts);
-            moduleBalanceChart.data.datasets[0].backgroundColor = Object.keys(moduleCounts).map(key => moduleConfig[key].color);
-            moduleBalanceChart.update();
-        }
-
-        function createEmotionsChart() {
-            if (emotionsChart) emotionsChart.destroy();
-            const ctx = document.getElementById('emotionsChart')?.getContext('2d');
-            if(!ctx) return;
-            emotionsChart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Contagem de Emoções', data: [], backgroundColor: [] }] },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
-                    plugins: { legend: { display: false } }
-                }
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
             });
         }
 
-        function updateEmotionsChart() {
-            if (!emotionsChart) return;
-            const filteredLogs = state.currentFilter === 'all' 
-                ? state.emotionLogs 
-                : state.emotionLogs.filter(log => log.Modulo_Principal === state.currentFilter);
-
-            const emotionCounts = {};
-            [...emoTags.qualitative.positive, ...emoTags.qualitative.challenging].forEach(e => { emotionCounts[e] = 0; });
-            
-            filteredLogs.forEach(log => {
-                if (log.Emo_Qualidade && emotionCounts.hasOwnProperty(log.Emo_Qualidade)) {
-                    emotionCounts[log.Emo_Qualidade]++;
-                }
-            });
-            
-            const labels = Object.keys(emotionCounts);
-            const data = Object.values(emotionCounts);
-            const colors = labels.map(label => emoTags.qualitative.positive.includes(label) ? '#22c55e' : '#f97316');
-
-            emotionsChart.data.labels = labels;
-            emotionsChart.data.datasets[0].data = data;
-            emotionsChart.data.datasets[0].backgroundColor = colors;
-            emotionsChart.update();
-        }
-
-        // --- LÓGICA DOS MODAIS ---
-        window.openModal = (itemId) => {
-            state.activeItem = state.allItems.find(item => item.id === itemId);
-            if (!state.activeItem) return;
-            state.modalOpen = true;
-            state.checkinStep = 0;
-            state.checkinData = { ...state.activeItem.Checkin_JSON } || { before_emo: null, before_emob: null, after_emo: null, after_emob: null, insight: '' };
-            renderModal();
+        // --- LÓGICA DO MODAL ---
+        window.openQuickAddModal = () => {
             const modal = document.getElementById('modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        };
-
-        window.closeModal = () => {
-            state.modalOpen = false;
-            state.activeItem = null;
-            const modal = document.getElementById('modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        };
-
-        window.openQuickAddModal = (prefillText = '') => {
-            state.modalOpen = true;
-            state.activeItem = { Tipo: 'add-form' };
-            renderModal();
-            const input = document.getElementById('quick-add-input');
-            if (input) {
-                input.value = prefillText;
-                input.focus();
-            }
-            const modal = document.getElementById('modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        };
-
-        window.useTemplate = (templateId) => {
-            const template = state.libraryItems.find(t => t.id === templateId);
-            if (template) {
-                openQuickAddModal(template.Conteudo_Template);
-            }
-        };
-
-        function renderModal() {
             const modalContent = document.getElementById('modal-content');
-            if (!state.modalOpen || !state.activeItem) { modalContent.innerHTML = ''; return; }
-            const item = state.activeItem;
-            
-            if (item.Tipo === 'add-form') {
-                renderQuickAddForm(modalContent);
-                return;
-            }
-            if (item.Tipo === 'confirmation') {
-                renderConfirmationView(modalContent, item.parsedData);
-                return;
-            }
-            if (item.Status === 'Inbox') {
-                 renderEditInboxItem(modalContent, item);
-                 return;
-            }
-            if (item.Tags && item.Tags.includes('#needs_checkin') && state.checkinStep > 0) {
-                renderCheckinFlow(modalContent, item);
-                return;
-            }
-            
-            const module = getModuleFromTags(item.Tags);
-            const config = moduleConfig[module] || moduleConfig.default;
-            const tagsHtml = (item.Tags || '').split(' ').filter(t=>t).map(tag => `<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded-md text-xs font-medium">${tag}</span>`).join(' ');
-            const activityTitle = item.Nome_Atividade;
-            
-            let mainContentHtml = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <span class="py-1 px-3 rounded-full text-sm font-semibold text-white" style="background-color: ${config.color};">${config.icon} ${config.name}</span>
-                        <h3 class="text-3xl font-bold mt-2 text-gray-800">${activityTitle}</h3>
-                        ${item.Tipo === 'Planner' ? `<p class="text-lg text-gray-500">${item.Data_Agendada}, ${item.Hora_Agendada || ''}</p>` : ''}
-                    </div>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
-                </div>`;
-            
-            let detailsHtml = '<div class="mt-6 border-t pt-6">';
-            if (item.Tipo === 'Diario') {
-                detailsHtml += `<div class="prose max-w-none text-gray-700 whitespace-pre-wrap">${item.Conteudo_Descricao}</div><h4 class="font-semibold text-lg text-gray-700 mt-6 mb-2">Tags</h4>`;
-            } else {
-                 detailsHtml += `<h4 class="font-semibold text-lg text-gray-700 mb-2">Descrição</h4><p class="text-gray-600 mb-4">${item.Conteudo_Descricao || 'Nenhuma descrição.'}</p><h4 class="font-semibold text-lg text-gray-700 mb-2">Tags</h4>`;
-            }
-            detailsHtml += `<div class="flex flex-wrap gap-2">${tagsHtml}</div>`;
-            
-            if (item.Tipo === 'Projeto' && item.Subtarefas_JSON && item.Subtarefas_JSON.length > 0) {
-                detailsHtml += '<h4 class="font-semibold text-lg text-gray-700 mt-4 mb-2">Subtarefas</h4><ul class="space-y-2">';
-                item.Subtarefas_JSON.forEach((sub, index) => {
-                    detailsHtml += `
-                        <li class="flex items-center cursor-pointer" onclick="toggleSubtask('${item.id}', ${index})">
-                            <span class="w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-colors" style="border-color: ${config.color}; background-color: ${sub.concluida ? config.color : 'transparent'};">
-                                ${sub.concluida ? `<span class="text-white text-xs">✔</span>` : ''}
-                            </span>
-                            <span class="${sub.concluida ? 'text-gray-400 line-through' : ''}">${sub.texto}</span>
-                        </li>`;
-                });
-                detailsHtml += '</ul>';
-            }
-            detailsHtml += '</div>';
-
-            let checkinButtonHtml = '';
-            if(item.Tags && item.Tags.includes('#needs_checkin')) {
-                checkinButtonHtml = `<button onclick="startCheckin()" class="mt-6 w-full text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105" style="background-color: ${config.color};">Iniciar Check-in Emocional</button>`;
-            }
-            modalContent.innerHTML = mainContentHtml + detailsHtml + checkinButtonHtml;
-        }
-
-        function renderQuickAddForm(modalContent) {
             modalContent.innerHTML = `
-                <div class="flex justify-between items-start mb-6">
-                    <h3 class="text-3xl font-bold text-gray-800">🤖 Captura Rápida</h3>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: planejar o novo site da empresa com subtarefas: alinhar design, desenvolver frontend, testar"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
                 </div>
-                <p class="text-gray-600 mb-4">Escreva o que deseja fazer. O MindMate irá interpretar e criar o item. Use <strong>#tags</strong> para categorizar.</p>
-                <form id="quick-add-form" onsubmit="handleQuickAddItem(event)">
-                    <textarea id="quick-add-input" rows="4" class="w-full p-3 border rounded-lg bg-gray-50 text-lg" placeholder="Ex: projeto: Lançar site #mod_work com subtarefas: Design, Frontend, Backend"></textarea>
-                    <p class="text-xs text-gray-500 mt-2">Dicas: "diario:", "projeto:", "planner:". Prazos: "para amanhã", "até sexta".</p>
-                    <button type="submit" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">Adicionar</button>
-                </form>`;
-        }
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('quick-add-input').focus();
+            
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if(!input) return;
+                
+                state.gemResponse = await callMindMateGem(input);
+                renderConfirmationView();
+            };
+        };
         
-        function renderConfirmationView(modalContent, parsedData) {
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
              modalContent.innerHTML = `
-                <div class="flex justify-between items-start mb-6">
-                    <h3 class="text-3xl font-bold text-gray-800">🤖 Captura Assistida</h3>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-3xl">&times;</button>
-                </div>
-                <p class="text-gray-600 mb-4">Analisei a sua entrada. Pretende criar o seguinte item?</p>
-                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2">
-                    <p><strong>Nome:</strong> ${parsedData.Nome_Atividade}</p>
-                    <p><strong>Tipo:</strong> ${parsedData.Tipo}</p>
-                    <p><strong>Tags:</strong> ${parsedData.Tags || 'Nenhuma'}</p>
-                    ${parsedData.Data_Agendada ? `<p><strong>Data:</strong> ${parsedData.Data_Agendada} ${parsedData.Hora_Agendada || ''}</p>` : ''}
-                    ${parsedData.Subtarefas_JSON.length > 0 ? `<p><strong>Subtarefas:</strong> ${parsedData.Subtarefas_JSON.map(s => s.texto).join(', ')}</p>` : ''}
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${classificacao.data_agendada ? `<p><strong>Data:</strong> ${new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${classificacao.subtarefas.length > 0 ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>` : ''}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
                 </div>
                 <div class="mt-6 flex gap-4">
-                     <button onclick="confirmAddItem(true)" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, criar item</button>
-                     <button onclick="confirmAddItem(false)" class="flex-1 bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600">📥 Enviar para o Inbox</button>
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
                 </div>
              `;
         }
+
+        window.confirmAction = () => {
+             console.log("AÇÃO CONFIRMADA: Enviando para API simulada:", state.gemResponse.google_action);
+             state.allItems.push(state.gemResponse);
+             renderAll();
+             alert(`Ação executada no ${state.gemResponse.google_action.service} (Simulado)`);
+             closeModal();
+        };
         
-        function renderEditInboxItem(modalContent, item) {
-            renderQuickAddForm(modalContent);
-            const formTitle = modalContent.querySelector('h3');
-            formTitle.textContent = "📥 Processar Inbox";
-            
-            const formDescription = modalContent.querySelector('p');
-            formDescription.textContent = "Defina os detalhes deste item para o adicionar ao seu sistema.";
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+        };
 
-            const input = document.getElementById('quick-add-input');
-            input.value = `${item.Tipo.toLowerCase()}: ${item.Nome_Atividade} ${item.Tags}`;
-
-            const submitButton = modalContent.querySelector('button[type="submit"]');
-            submitButton.textContent = "Atualizar e Processar Item";
-            
-            const form = document.getElementById('quick-add-form');
-            form.onsubmit = (event) => {
-                event.preventDefault();
-                const updatedText = input.value.trim();
-                if (!updatedText) return;
-                
-                const parsed = parseInput(updatedText);
-                 const finalItem = {
-                    Nome_Atividade: parsed.Nome_Atividade,
-                    Tipo: parsed.Tipo,
-                    Status: 'Ativo',
-                    Tags: parsed.Tags,
-                    Conteudo_Descricao: parsed.Tipo === 'Diario' ? item.Conteudo_Descricao || 'Entrada processada do Inbox.' : item.Conteudo_Descricao,
-                    Subtarefas_JSON: parsed.Subtarefas_JSON,
-                    Data_Agendada: parsed.Data_Agendada,
-                    Hora_Agendada: parsed.Hora_Agendada
-                };
-
-                updateItem(item.id, finalItem);
-                closeModal();
-            };
+        // --- INICIALIZAÇÃO ---
+        function main() {
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind #type_personal_ritual", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "07:00", status: 'Ativo'}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório", tipo: "Planner", tags: "#mod_work", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "09:00", status: 'Ativo'}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance", status: 'Ativo'}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose", status: 'Ativo'}},
+            ];
+            renderAll();
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
         }
 
-
-        function parseInput(text) {
-            let remainingText = text;
-            let isAmbiguous = true;
-
-            const tags = (remainingText.match(/#\w+/g) || []).join(' ');
-            remainingText = remainingText.replace(/#\w+/g, '').trim();
-
-            let type = 'Tarefa';
-            const typeMatch = remainingText.match(/^(diario|projeto|planner|tarefa):/i);
-            if (typeMatch) {
-                isAmbiguous = false;
-                type = typeMatch[1].charAt(0).toUpperCase() + typeMatch[1].slice(1).toLowerCase();
-                remainingText = remainingText.substring(typeMatch[0].length).trim();
-            }
-
-            let subtarefas = [];
-            const subtaskMatch = remainingText.match(/com subtarefas:(.*)/i);
-            if (subtaskMatch) {
-                subtarefas = subtaskMatch[1].split(',')
-                                        .map(s => s.trim())
-                                        .filter(s => s)
-                                        .map(s => ({ texto: s, concluida: false }));
-                remainingText = remainingText.substring(0, subtaskMatch.index).trim();
-            }
-            
-            let dataAgendada = null;
-            let horaAgendada = null;
-            
-            const timeMatch = remainingText.match(/(?:às|as|pelas)\s+(\d{1,2}:\d{2})/i);
-             if (timeMatch) {
-                horaAgendada = timeMatch[1];
-                remainingText = remainingText.replace(timeMatch[0], '').trim();
-            }
-
-            const dayKeywords = 'hoje|amanhã|segunda|terça|quarta|quinta|sexta|sábado|domingo';
-            const dateMatch = new RegExp(`(?:para|até|na|em)\\s+(${dayKeywords})`, 'i');
-            const dateMatchResult = remainingText.match(dateMatch);
-            if (dateMatchResult) {
-                dataAgendada = parseDate(dateMatchResult[1]);
-                remainingText = remainingText.replace(dateMatchResult[0], '').trim();
-            }
-            
-            if (type === 'Planner' && !dataAgendada) {
-                 dataAgendada = parseDate('hoje');
-            }
-            
-            if (!isAmbiguous) {
-                 // It's not ambiguous if a type keyword was used.
-            } else if (/\b(projeto|ritual|hábito)\b/i.test(remainingText)) {
-                 type = 'Projeto'; // Default suggestion
-                 if (/\b(ritual|hábito)\b/i.test(remainingText)) {
-                    type = 'Planner';
-                 }
-            }
-
-
-            return {
-                Nome_Atividade: remainingText,
-                Tipo: type,
-                Tags: tags,
-                Subtarefas_JSON: subtarefas,
-                Data_Agendada: dataAgendada,
-                Hora_Agendada: horaAgendada,
-                isAmbiguous: isAmbiguous
-            };
-        }
-        
-        function parseDate(keyword) {
-            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-            const today = new Date();
-            const dayIndex = today.getDay();
-            keyword = keyword.toLowerCase();
-
-            switch (keyword) {
-                case 'hoje': return days[dayIndex];
-                case 'amanhã': return days[(dayIndex + 1) % 7];
-                case 'segunda': return 'Segunda';
-                case 'terça': return 'Terça';
-                case 'quarta': return 'Quarta';
-                case 'quinta': return 'Quinta';
-                case 'sexta': return 'Sexta';
-                case 'sábado': return 'Sábado';
-                case 'domingo': return 'Domingo';
-                default: return null;
-            }
-        }
-
-        window.handleQuickAddItem = (event) => {
-            event.preventDefault();
-            const input = document.getElementById('quick-add-input').value.trim();
-            if (!input) return;
-
-            const parsed = parseInput(input);
-            
-            if (parsed.isAmbiguous) {
-                state.activeItem = { Tipo: 'confirmation', parsedData: parsed };
-                renderModal();
-            } else {
-                 const item = {
-                    Nome_Atividade: parsed.Nome_Atividade,
-                    Tipo: parsed.Tipo,
-                    Status: 'Ativo',
-                    Tags: parsed.Tags,
-                    Conteudo_Descricao: parsed.Tipo === 'Diario' ? 'Entrada criada via Captura Rápida.' : '',
-                    Subtarefas_JSON: parsed.Subtarefas_JSON,
-                    Checkin_JSON: {},
-                    Data_Agendada: parsed.Data_Agendada,
-                    Hora_Agendada: parsed.Hora_Agendada
-                };
-                 addNovoItem(item);
-                 closeModal();
-            }
-        }
-        
-        window.confirmAddItem = (shouldCreateActive) => {
-            const parsed = state.activeItem.parsedData;
-            if (!parsed) return;
-
-            const item = {
-                Nome_Atividade: parsed.Nome_Atividade,
-                Tipo: parsed.Tipo,
-                Status: shouldCreateActive ? 'Ativo' : 'Inbox',
-                Tags: parsed.Tags,
-                Conteudo_Descricao: parsed.Tipo === 'Diario' ? 'Entrada criada via Captura Rápida.' : '',
-                Subtarefas_JSON: parsed.Subtarefas_JSON,
-                Checkin_JSON: {},
-                Data_Agendada: parsed.Data_Agendada,
-                Hora_Agendada: parsed.Hora_Agendada
-            };
-            
-            if (item.Status === 'Inbox' && item.Tipo === 'Tarefa' && item.Data_Agendada) {
-                 addNovoItem(item);
-            }
-            else if (item.Status === 'Ativo' && item.Tipo === 'Tarefa' && item.Data_Agendada) {
-                addNovoItem(item);
-                addNovoItem({...item, Tipo: 'Planner'});
-            } else {
-                 addNovoItem(item);
-            }
-            
-            closeModal();
-        }
-
-        window.toggleSubtask = (itemId, subtaskIndex) => {
-            const item = state.allItems.find(p => p.id === itemId);
-            if(item && item.Subtarefas_JSON) {
-                const newSubtasks = [...item.Subtarefas_JSON];
-                newSubtasks[subtaskIndex].concluida = !newSubtasks[subtaskIndex].concluida;
-                updateItem(itemId, { Subtarefas_JSON: newSubtasks });
-            }
-        }
-        
-        // Funções de Checkin
-        window.startCheckin = () => { state.checkinStep = 1; renderModal(); }
-        window.selectEmotion = (type, value, element) => {
-            state.checkinData[type] = value;
-            const group = element.parentElement;
-            group.querySelectorAll('.checkin-emotion-btn').forEach(btn => btn.classList.remove('selected'));
-            element.classList.add('selected');
-        }
-        window.proceedToCheckin = async (nextStep) => {
-             const itemId = state.activeItem.id;
-             const itemModule = getModuleFromTags(state.activeItem.Tags);
-
-            if (nextStep === 3) { // Finalizando
-                state.checkinData.insight = document.getElementById('checkin-insight')?.value || '';
-                
-                await updateItem(itemId, { Checkin_JSON: state.checkinData, Status: 'Concluído' });
-
-                if(state.checkinData.before_emob) {
-                    await addLogEmocao({ ItemID_FK: itemId, Checkin_Tipo: 'ANTES', Emo_Base: state.checkinData.before_emo, Emo_Qualidade: state.checkinData.before_emob, Modulo_Principal: itemModule });
-                }
-                if(state.checkinData.after_emob) {
-                    await addLogEmocao({ ItemID_FK: itemId, Checkin_Tipo: 'DEPOIS', Emo_Base: state.checkinData.after_emo, Emo_Qualidade: state.checkinData.after_emob, Modulo_Principal: itemModule });
-                }
-            }
-            state.checkinStep = nextStep;
-            renderModal();
-        }
-
-        function renderCheckinFlow(modalContent, item) {
-            const config = moduleConfig[getModuleFromTags(item.Tags)];
-            const activityTitle = item.Nome_Atividade;
-            let html = `<div class="flex justify-between items-start"><h3 class="text-3xl font-bold text-gray-800">${activityTitle}</h3><button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-3xl">&times;</button></div><div class="mt-6 border-t pt-6 text-center">`;
-            
-            if (state.checkinStep === 1) { // ANTES
-                html += `<h4 class="font-bold text-2xl text-gray-700 mb-2">Check-in: ANTES</h4><p class="text-gray-600 mb-6">Como você se sente ao iniciar esta atividade?</p>`;
-            } else if (state.checkinStep === 2) { // DEPOIS
-                html += `<h4 class="font-bold text-2xl text-gray-700 mb-2">Check-in: DEPOIS</h4><p class="text-gray-600 mb-6">Tarefa concluída! Como você se sente agora?</p>`;
-            } else { // COMPLETO
-                html += `<div class="text-center py-10"><div class="w-20 h-20 bg-green-100 rounded-full mx-auto flex items-center justify-center mb-4"><span class="text-4xl">🎉</span></div><h4 class="font-bold text-2xl text-green-700 mb-2">Check-in Concluído!</h4><p class="text-gray-600 mb-6">Seus insights foram registrados. Bom trabalho!</p><button onclick="closeModal()" class="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">Fechar</button></div>`;
-                modalContent.innerHTML = html + `</div>`;
-                return;
-            }
-
-            const stepType = state.checkinStep === 1 ? 'before' : 'after';
-            html += `
-                <div class="mb-4">
-                    <label class="font-semibold block mb-2 text-left">Emoção Base (#emo)</label>
-                    <div class="flex flex-wrap gap-2 justify-center">${emoTags.base.map(e => `<button onclick="selectEmotion('${stepType}_emo', '${e}', this)" class="checkin-emotion-btn px-3 py-1 bg-gray-200 rounded-full text-sm hover:bg-gray-300 transition-colors ${state.checkinData[`${stepType}_emo`] === e ? 'selected' : ''}" style="--module-color: ${config.color};">${e}</button>`).join('')}</div>
-                </div>
-                <div class="mb-6">
-                    <label class="font-semibold block mb-2 text-left">Qualidade da Emoção (#emob)</label>
-                    <div class="flex flex-wrap gap-2 justify-center">${[...emoTags.qualitative.positive, ...emoTags.qualitative.challenging].map(e => `<button onclick="selectEmotion('${stepType}_emob', '${e}', this)" class="checkin-emotion-btn px-3 py-1 bg-gray-200 rounded-full text-sm hover:bg-gray-300 transition-colors ${state.checkinData[`${stepType}_emob`] === e ? 'selected' : ''}" style="--module-color: ${config.color};">${e}</button>`).join('')}</div>
-                </div>
-            `;
-            
-            if (state.checkinStep === 1) {
-                html += `<button onclick="proceedToCheckin(2)" class="w-full text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105" style="background-color: ${config.color};">Concluir Tarefa e Iniciar Check-in "DEPOIS"</button>`;
-            } else { // step 2
-                html += `
-                    <div class="mt-4">
-                        <label class="font-semibold block mb-2 text-left">Algum insight para o Diário ou Emotional Inbox?</label>
-                        <textarea id="checkin-insight" class="w-full p-2 border rounded-lg bg-gray-50" rows="3" placeholder="Opcional...">${state.checkinData.insight || ''}</textarea>
-                    </div>
-                    <button onclick="proceedToCheckin(3)" class="mt-6 w-full text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105" style="background-color: ${config.color};">Finalizar e Salvar</button>`;
-            }
-            html += `</div>`;
-            modalContent.innerHTML = html;
-        }
-        
-        // --- FUNÇÕES DE INICIALIZAÇÃO E UTILITÁRIOS ---
-        
-        function hideLoader() {
-            const loaderContainer = document.getElementById('loader-container');
-            const appContainer = document.getElementById('app');
-            if (loaderContainer && appContainer) {
-                loaderContainer.classList.add('opacity-0');
-                appContainer.classList.remove('opacity-0');
-                setTimeout(() => loaderContainer.style.display = 'none', 500);
-            }
-        }
-        
-        // Evento de inicialização principal
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('modal').addEventListener('click', (e) => { 
-                if (e.target.id === 'modal') closeModal(); 
-            });
-            createChart();
-            initializeFirebase();
-        });
+        main();
 
     </script>
 </body>
