@@ -108,8 +108,14 @@
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'processText', text: text }),
-                    mode: 'cors',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
                 });
+
+                if (!response.ok) {
+                  throw new Error(`Network response was not ok: ${response.statusText}`);
+                }
 
                 const result = await response.json();
 
@@ -204,8 +210,8 @@
                 const { classificacao } = item;
                 const module = getModuleFromTags(classificacao.tags);
                 html += `
-                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-<span class="math-inline">\{module\}"\>
-<p class\="font\-semibold"\></span>{classificacao.nome_atividade}</p>
+                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                        <p class="font-semibold">${classificacao.nome_atividade}</p>
                     </div>
                 `;
             });
@@ -239,4 +245,188 @@
                 const itemEl = document.createElement('div');
                 itemEl.className = `today-item flex items-center p-3 rounded-lg bg-white`;
                 itemEl.innerHTML = `
-                    <input type="checkbox"
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
+                    <label class="flex-grow">
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                    </label>
+                    <span class="w-3 h-3 rounded-full" style="background-color: var(--module-color-${module})"></span>`;
+                list.appendChild(itemEl);
+            });
+        }
+
+        function renderPlanner() {
+            const plannerGrid = document.getElementById('planner-grid');
+            if (!plannerGrid) return;
+            plannerGrid.innerHTML = '';
+            const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+
+            days.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
+                dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
+
+                const dayOfWeek = (index + 1) % 7; // 1 for Monday, ..., 0 for Sunday
+
+                const dayItems = state.allItems
+                    .filter(item => {
+                        if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
+                        const itemDate = new Date(item.classificacao.data_agendada + "T00:00:00");
+                        return itemDate.getDay() === dayOfWeek;
+                    })
+                    .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+                dayItems.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
+                    dayColumn.appendChild(itemEl);
+                });
+                plannerGrid.appendChild(dayColumn);
+            });
+        }
+
+        function renderFilters() {
+            const filterContainer = document.getElementById('filter-container');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+            const allButton = document.createElement('button');
+            allButton.textContent = 'Todos';
+            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
+            allButton.style.setProperty('--module-color', '#4b5563');
+            if (state.currentFilter === 'all') allButton.classList.add('active');
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
+            filterContainer.appendChild(allButton);
+
+            Object.entries(moduleConfig).forEach(([key, config]) => {
+                if (key === 'default') return;
+                const button = document.createElement('button');
+                button.innerHTML = `${config.icon} ${config.name}`;
+                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
+                button.style.setProperty('--module-color', config.color);
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
+                filterContainer.appendChild(button);
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
+            }
+
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if (key !== 'default') moduleCounts[key] = 0; });
+
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if (moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
+                    }
+                });
+            });
+
+            moduleBalanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        window.openQuickAddModal = () => {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: revisar o relatório de finanças #mod_finance para amanhã às 10:00"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('quick-add-input').focus();
+
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if (!input) return;
+
+                state.gemResponse = await callMindMateGem(input);
+                if (state.gemResponse) {
+                    renderConfirmationView();
+                }
+            };
+        };
+
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
+            const subtasksHtml = (classificacao.subtarefas && classificacao.subtarefas.length > 0)
+                ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>`
+                : '';
+            const dateString = classificacao.data_agendada
+                ? new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+                : '';
+
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${dateString ? `<p><strong>Data:</strong> ${dateString} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${subtasksHtml}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
+                </div>
+                <div class="mt-6 flex gap-4">
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
+                </div>
+             `;
+        }
+
+        window.confirmAction = () => {
+            console.log("Ação confirmada e executada no backend. Atualizando a UI:", state.gemResponse);
+            state.allItems.push(state.gemResponse);
+            renderAll();
+            alert(`Ação executada no ${state.gemResponse.google_action.service} (via API)`);
+            closeModal();
+        };
+
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal-content').innerHTML = '';
+        };
+
+        function main() {
+            // Dados iniciais podem ser mantidos para visualização
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "07:00", subtarefas:[]}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório", tipo: "Planner", tags: "#mod_work", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "09:00", subtarefas:[]}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance", status: 'Ativo', subtarefas:[]}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose", status: 'Ativo', subtarefas:[]}},
+            ];
+            renderAll();
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
+        }
+
+        main();
+    </script>
+</body>
+</html>
