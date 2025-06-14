@@ -1,137 +1,438 @@
-const GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMate | Dashboard Integrado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f7f4; color: #3a3a3a; }
+        .module-color-body { --module-color: #ef4444; } .module-color-mind { --module-color: #3b82f6; }
+        .module-color-family { --module-color: #22c55e; } .module-color-work { --module-color: #f97316; }
+        .module-color-finance { --module-color: #8b5cf6; } .module-color-purpose { --module-color: #eab308; }
+        .module-color-bridge { --module-color: #64748b; } .module-color-default { --module-color: #9ca3af; }
+        .module-item-border { border-left: 4px solid var(--module-color); }
+        .planner-item, .list-item, .ritual-card { transition: all 0.2s ease-in-out; }
+        .planner-item:hover, .list-item:hover, .ritual-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .filter-button.active { background-color: var(--module-color) !important; color: white !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-button.active { border-bottom-color: var(--module-color); color: var(--module-color); }
+        #loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="loader-container" class="fixed inset-0 bg-white/80 flex items-center justify-center z-[100]">
+        <div class="text-center">
+            <div id="loader" class="mx-auto"></div>
+            <p class="mt-4 text-lg text-gray-600">Carregando seu universo MindMate...</p>
+        </div>
+    </div>
 
-function doPost(e) {
-  try {
-    // A lógica principal permanece a mesma
-    const requestData = JSON.parse(e.postData.contents);
-    if (requestData && requestData.action === 'processText' && requestData.text) {
-      const userInput = requestData.text;
-      const gemResponse = processWithGemini(userInput);
-      executeGoogleAction(gemResponse.google_action);
-      
-      const jsonResponse = JSON.stringify({ success: true, gemResponse: gemResponse });
+    <div id="app" class="container mx-auto p-4 md:p-8 opacity-0 transition-opacity duration-500">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">MindMate Dashboard</h1>
+            <p class="text-lg text-gray-500">Seu centro de comando para uma vida com intenção e clareza.</p>
+        </header>
 
-      // Retornamos a resposta da forma mais simples possível
-      return ContentService
-        .createTextOutput(jsonResponse)
-        .setMimeType(ContentService.MimeType.JSON);
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 order-2 lg:order-1">
+                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Foco do Dia</h2>
+                    <div id="today-focus-list" class="space-y-3"></div>
+                </div>
+                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Planner Semanal</h2>
+                    <div id="planner-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                     <div class="border-b border-gray-200 mb-4">
+                        <nav class="-mb-px flex space-x-6 overflow-x-auto" id="main-tabs"></nav>
+                    </div>
+                    <div id="main-content"></div>
+                </div>
+            </div>
+            <div class="lg:col-span-1 order-1 lg:order-2">
+                <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Balanço dos Módulos</h3>
+                    <div class="h-64"><canvas id="moduleBalanceChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Filtros</h3>
+                    <div id="filter-container" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-    } else {
-      throw new Error("Ação ou texto inválido na requisição.");
-    }
-  } catch (error) {
-     Logger.log("Erro em doPost: " + error.toString());
-     const errorResponse = JSON.stringify({ success: false, error: error.toString() });
-     return ContentService
-      .createTextOutput(errorResponse)
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+    <div id="fab-container" class="fixed bottom-8 right-8 z-40">
+        <button onclick="openQuickAddModal()" class="w-16 h-16 bg-blue-600 rounded-full text-white flex items-center justify-center text-3xl shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-110">+</button>
+    </div>
 
-// As funções abaixo (processWithGemini, executeGoogleAction) permanecem as mesmas
-function processWithGemini(userInput) {
-  if (!GEMINI_API_KEY) {
-    throw new Error("Erro: GEMINI_API_KEY não configurada nas propriedades do script.");
-  }
-  const today = new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  const promptText = `
-    Você é o 'Processador e Dispatcher de Ações' do sistema de organização pessoal MindMate.
-    Sua única função é analisar o texto do usuário e traduzi-lo para um objeto JSON estruturado.
-    Você deve ser estritamente técnico e retornar apenas o JSON.
-    **Formato de Saída Obrigatório (JSON):**
-    {
-      "classificacao": {
-        "nome_atividade": "string",
-        "tipo": "string",
-        "tags": "string (ex: '#mod_work #type_fixed #emo_foco')",
-        "data_agendada": "string (formato: yyyy-MM-dd) | null",
-        "hora_agendada": "string (formato: HH:mm) | null",
-        "subtarefas": [
-          {"texto": "string", "concluida": false}
-        ]
-      },
-      "google_action": {
-        "service": "string (GoogleCalendar|GoogleTasks|GoogleDocs|GoogleKeep)",
-        "payload": {}
-      }
-    }
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8"></div>
+    </div>
 
-    ---
-    **Biblioteca de Tags & Glossário de Tipos Oficiais:**
-    * **tipo (Escolha UMA):** diario, tarefa, projeto, planner, nota_ideia.
-    * **tags (Use UMA ou MAIS):**
-        * **Módulos (#mod_):** #mod_work, #mod_family, #mod_mind, #mod_body, #mod_finance, #mod_purpose, #mod_bridge.
-        * **Tipo de Ação (#type_):** #type_fixed, #type_project, #type_habit, #type_recurring, #type_personal_ritual.
-        * **Emoções (#emo_):** Inferir de palavras como "feliz" (#emo_alegria), "ansioso" (#emo_ansiedade), etc.
-    ---
-    **Regras de Ação e Payload:**
-    1.  Se 'tipo' for 'planner': service: "GoogleCalendar", payload: { "summary": "[nome_atividade]", "description": "[tags]", "start": "[data_agendada]T[hora_agendada]", "end": "[data_agendada]T[hora_agendada + 1 hora]" }
-    2.  Se 'tipo' for 'tarefa': service: "GoogleTasks", payload: { "title": "[nome_atividade]", "notes": "[tags]", "due": "[data_agendada]T00:00:00.000Z" }
-    3.  Se 'tipo' for 'projeto': service: "GoogleDocs", payload: { "title": "Projeto: [nome_atividade]", "body": "Tags: [tags]\\n\\n**Subtarefas:**\\n- [subtarefa1]\\n- [subtarefa2]" }
-    4.  Se 'tipo' for 'diario' ou 'nota_ideia': service: "GoogleKeep", payload: { "title": "[nome_atividade]", "text": "Tags: [tags]\\n\\n[conteúdo completo do usuário]" }
- 
-    5.  A data de hoje é ${today}. Use o ano atual para as datas.
-    Converta datas relativas como "amanhã" ou "próxima sexta" para o formato yyyy-MM-dd.
-    ---
-    **Texto do Usuário para Processar:**
-    ${userInput}
-  `;
-  const requestBody = { contents: [{ parts: [{ text: promptText }] }] };
-  const options = {
-    method: 'post',
-    contentType: 'application/json',
-    payload: JSON.stringify(requestBody),
-    muteHttpExceptions: true
-  };
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  
-  const response = UrlFetchApp.fetch(url, options);
-  const rawGeminiResponseText = response.getContentText();
-  Logger.log("Resposta do Gemini: " + rawGeminiResponseText);
-  const apiResponse = JSON.parse(rawGeminiResponseText);
-  if (apiResponse.error) {
-    throw new Error("Erro da API Gemini: " + apiResponse.error.message);
-  }
+    <script type="module">
+        let moduleBalanceChart;
 
-  const textPart = apiResponse.candidates[0].content.parts[0].text;
-  const result = JSON.parse(textPart.replace(/```json\n?|\n```/g, ''));
-  return result;
-}
+        const state = {
+            allItems: [],
+            modalOpen: false,
+            gemResponse: null,
+            activeTab: 'projects',
+            currentFilter: 'all',
+        };
 
-function executeGoogleAction(googleAction) {
-  Logger.log(`Executando ação para o serviço: ${googleAction.service}`);
-  switch(googleAction.service) {
-    case 'GoogleCalendar':
-      const calendar = CalendarApp.getDefaultCalendar();
-      const start = new Date(googleAction.payload.start);
-      const end = new Date(googleAction.payload.end);
-      calendar.createEvent(googleAction.payload.summary, start, end, {description: googleAction.payload.description});
-      Logger.log("Evento criado no Google Calendar.");
-      break;
-    case 'GoogleTasks':
-      const task = Tasks.newTask();
-      task.setTitle(googleAction.payload.title);
-      task.setNotes(googleAction.payload.notes);
-      if (googleAction.payload.due) {
-        task.setDue(googleAction.payload.due);
-      }
-      Tasks.Tasks.insert(task, '@default');
-      Logger.log("Tarefa criada no Google Tasks.");
-      break;
-    case 'GoogleDocs':
-      const doc = DocumentApp.create(googleAction.payload.title);
-      doc.getBody().setText(googleAction.payload.body);
-      Logger.log(`Documento '${doc.getName()}' criado no Google Docs.`);
-      break;
-    case 'GoogleKeep':
-      Logger.log("Ação para Google Keep. Como não há API, simulando criação de nota.");
-      const keepNoteTitle = `Nota/Ideia do MindMate: ${googleAction.payload.title}`;
-      const keepNoteBody = `Uma nova entrada foi capturada pelo MindMate:\n\n${googleAction.payload.text}`;
-      MailApp.sendEmail(Session.getActiveUser().getEmail(), keepNoteTitle, keepNoteBody);
-      Logger.log("Nota enviada por e-mail como fallback para o Google Keep.");
-      break;
-    default:
-      Logger.log(`Serviço desconhecido: ${googleAction.service}. Nenhuma ação executada.`);
-      break;
-  }
-}
+        const moduleConfig = {
+            body: { name: 'Corpo', color: '#ef4444', icon: '💪' },
+            mind: { name: 'Mente', color: '#3b82f6', icon: '🧠' },
+            family: { name: 'Família', color: '#22c55e', icon: '🏡' },
+            work: { name: 'Trabalho', color: '#f97316', icon: '💼' },
+            finance: { name: 'Finanças', color: '#8b5cf6', icon: '💰' },
+            purpose: { name: 'Propósito', color: '#eab308', icon: '🧭' },
+            default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
+        };
+
+        async function callMindMateGem(text) {
+            const submitBtn = document.getElementById('quick-add-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processando...';
+
+            const SCRIPT_URL = "INSIRA_AQUI_A_NOVA_URL_DO_DEPLOYMENT"; // IMPORTANTE
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'processText', text: text }),
+                    // A remoção do 'headers' simplifica a requisição para evitar o erro de CORS
+                });
+
+                if (!response.ok) {
+                  throw new Error(`A resposta da rede não foi 'ok': ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success && result.gemResponse) {
+                    return result.gemResponse;
+                } else {
+                    throw new Error(result.error || 'A API retornou uma resposta inválida.');
+                }
+
+            } catch (error) {
+                console.error("Erro ao chamar a API do MindMate:", error);
+                alert("Falha ao processar sua entrada. Verifique o console para mais detalhes. Erro: " + error.message);
+                return null;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Processar com IA';
+            }
+        }
+
+        // --- O restante do código JavaScript permanece o mesmo ---
+
+        function getModuleFromTags(tags) {
+            if (!tags) return 'default';
+            const tagArray = tags.split(' ');
+            const modTag = tagArray.find(t => t.startsWith('#mod_'));
+            if (!modTag) return 'default';
+            const moduleKey = modTag.replace('#mod_', '');
+            return moduleConfig[moduleKey] ? moduleKey : 'default';
+        }
+
+        function renderAll() {
+            renderFilters();
+            renderPlanner();
+            renderMainContent();
+            renderTodaysFocus();
+            if (document.getElementById('moduleBalanceChart')) {
+                renderChart();
+            }
+        }
+
+        window.setActiveTab = (tabName) => {
+            state.activeTab = tabName;
+            renderMainContent();
+        }
+
+        window.setFilter = (moduleKey) => {
+            state.currentFilter = moduleKey;
+            renderAll();
+        }
+
+        function renderMainContent() {
+            const tabsContainer = document.getElementById('main-tabs');
+            const contentContainer = document.getElementById('main-content');
+            if (!tabsContainer || !contentContainer) return;
+
+            tabsContainer.innerHTML = `
+                <button onclick="setActiveTab('projects')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
+                <button onclick="setActiveTab('tasks')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
+                <button onclick="setActiveTab('planner')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Planner</button>
+                <button onclick="setActiveTab('diario')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
+             `;
+
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(state.activeTab)) {
+                    btn.classList.add('active', 'border-blue-600', 'text-blue-600');
+                    btn.style.setProperty('--module-color', '#3b82f6');
+                } else {
+                    btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+                }
+            });
+
+            const typeMap = {
+                projects: 'Projeto',
+                tasks: 'Tarefa',
+                planner: 'Planner',
+                diario: 'Diario'
+            };
+            renderList(contentContainer, typeMap[state.activeTab]);
+        }
+
+        function renderList(container, type) {
+            let items = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === type.toLowerCase());
+            if (state.currentFilter !== 'all') {
+                items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+            }
+
+            if (items.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${type}' encontrado.</p>`;
+                return;
+            }
+            let html = '<div class="space-y-3 pt-4">';
+            items.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                html += `
+                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                        <p class="font-semibold">${classificacao.nome_atividade}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTodaysFocus() {
+            const list = document.getElementById('today-focus-list');
+            if (!list) return;
+            list.innerHTML = '';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const todaysItems = state.allItems
+                .filter(item => {
+                    const itemDateStr = item.classificacao.data_agendada;
+                    if (item.classificacao.tipo.toLowerCase() !== 'planner' || !itemDateStr) return false;
+                    const itemDate = new Date(itemDateStr + 'T00:00:00');
+                    return itemDate.getTime() === today.getTime();
+                })
+                .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+            if (todaysItems.length === 0) {
+                list.innerHTML = `<p class="text-gray-500">Nenhuma atividade agendada para hoje.</p>`;
+                return;
+            }
+            todaysItems.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                const itemEl = document.createElement('div');
+                itemEl.className = `today-item flex items-center p-3 rounded-lg bg-white`;
+                itemEl.innerHTML = `
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
+                    <label class="flex-grow">
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                    </label>
+                    <span class="w-3 h-3 rounded-full" style="background-color: var(--module-color-${module})"></span>`;
+                list.appendChild(itemEl);
+            });
+        }
+
+        function renderPlanner() {
+            const plannerGrid = document.getElementById('planner-grid');
+            if (!plannerGrid) return;
+            plannerGrid.innerHTML = '';
+            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+            days.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
+                dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
+
+                const dayOfWeek = index; // 0 for Sunday, 1 for Monday, etc.
+
+                const dayItems = state.allItems
+                    .filter(item => {
+                        if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
+                        // Use UTC date to avoid timezone issues
+                        const itemDate = new Date(item.classificacao.data_agendada);
+                        const itemUtcDate = new Date(itemDate.getUTCFullYear(), itemDate.getUTCMonth(), itemDate.getUTCDate());
+                        return itemUtcDate.getUTCDay() === dayOfWeek;
+                    })
+                    .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+                dayItems.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
+                    dayColumn.appendChild(itemEl);
+                });
+                plannerGrid.appendChild(dayColumn);
+            });
+        }
+
+        function renderFilters() {
+            const filterContainer = document.getElementById('filter-container');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+            const allButton = document.createElement('button');
+            allButton.textContent = 'Todos';
+            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
+            allButton.style.setProperty('--module-color', '#4b5563');
+            if (state.currentFilter === 'all') allButton.classList.add('active');
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
+            filterContainer.appendChild(allButton);
+
+            Object.entries(moduleConfig).forEach(([key, config]) => {
+                if (key === 'default') return;
+                const button = document.createElement('button');
+                button.innerHTML = `${config.icon} ${config.name}`;
+                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
+                button.style.setProperty('--module-color', config.color);
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
+                filterContainer.appendChild(button);
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
+            }
+
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if (key !== 'default') moduleCounts[key] = 0; });
+
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if (moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
+                    }
+                });
+            });
+
+            moduleBalanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        window.openQuickAddModal = () => {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: revisar o relatório de finanças #mod_finance para amanhã às 10:00"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('quick-add-input').focus();
+
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if (!input) return;
+
+                state.gemResponse = await callMindMateGem(input);
+                if (state.gemResponse) {
+                    renderConfirmationView();
+                }
+            };
+        };
+
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
+            const subtasksHtml = (classificacao.subtarefas && classificacao.subtarefas.length > 0)
+                ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>`
+                : '';
+            
+            let dateString = '';
+            if (classificacao.data_agendada) {
+                const itemDate = new Date(classificacao.data_agendada);
+                const itemUtcDate = new Date(itemDate.getUTCFullYear(), itemDate.getUTCMonth(), itemDate.getUTCDate());
+                dateString = itemUtcDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' });
+            }
+
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${dateString ? `<p><strong>Data:</strong> ${dateString} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${subtasksHtml}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
+                </div>
+                <div class="mt-6 flex gap-4">
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
+                </div>
+             `;
+        }
+
+        window.confirmAction = () => {
+            console.log("Ação confirmada e executada no backend. Atualizando a UI:", state.gemResponse);
+            state.allItems.push(state.gemResponse);
+            renderAll();
+            alert(`Ação executada no ${state.gemResponse.google_action.service} (via API)`);
+            closeModal();
+        };
+
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal-content').innerHTML = '';
+        };
+
+        function main() {
+            // Dados iniciais podem ser mantidos para visualização
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "07:00", subtarefas:[]}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório", tipo: "Planner", tags: "#mod_work", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "09:00", subtarefas:[]}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance", status: 'Ativo', subtarefas:[]}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose", status: 'Ativo', subtarefas:[]}},
+            ];
+            renderAll();
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
+        }
+
+        main();
+    </script>
+</body>
+</html>
