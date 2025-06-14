@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindMate | DEBUG</title>
+    <title>MindMate | Dashboard Integrado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,53 +77,356 @@
     </div>
 
     <script type="module">
-        // --- INÍCIO DO SCRIPT DE DEPURAÇÃO ---
-        function main() {
-            console.log("DEBUG: Função main() iniciada.");
+        let moduleBalanceChart;
+
+        const state = {
+            allItems: [],
+            modalOpen: false,
+            gemResponse: null,
+            activeTab: 'projects',
+            currentFilter: 'all',
+        };
+
+        const moduleConfig = {
+            body: { name: 'Corpo', color: '#ef4444', icon: '💪' },
+            mind: { name: 'Mente', color: '#3b82f6', icon: '🧠' },
+            family: { name: 'Família', color: '#22c55e', icon: '🏡' },
+            work: { name: 'Trabalho', color: '#f97316', icon: '💼' },
+            finance: { name: 'Finanças', color: '#8b5cf6', icon: '💰' },
+            purpose: { name: 'Propósito', color: '#eab308', icon: '🧭' },
+            default: { name: 'Geral', color: '#9ca3af', icon: '📋' }
+        };
+
+        async function callMindMateGem(text) {
+            const submitBtn = document.getElementById('quick-add-submit');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processando...';
+
+            const SCRIPT_URL = "INSIRA_AQUI_A_NOVA_URL_DO_DEPLOYMENT"; 
+
             try {
-                // As funções de renderização foram desativadas para o teste.
-                // Se a página carregar agora, o erro está em uma delas.
-                console.log("DEBUG: Funções de renderização desativadas.");
-                // renderAll(); 
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'processText', text: text }),
+                });
 
-                console.log("DEBUG: Tentando esconder o loader e mostrar o app.");
-                document.getElementById('loader-container').style.display = 'none';
-                document.getElementById('app').classList.remove('opacity-0');
-                console.log("DEBUG: App deve estar visível agora.");
+                if (!response.ok) {
+                  throw new Error(`A resposta da rede não foi 'ok': ${response.statusText}`);
+                }
 
-                // Se chegarmos aqui, a inicialização básica funcionou.
-                // O problema provavelmente está nas funções de renderização ou na chamada da API.
-                alert("DEBUG: A inicialização básica funcionou! O painel principal (vazio) deve estar visível. O erro ocorre ao renderizar os dados ou ao chamar a API.");
+                const result = await response.json();
+
+                if (result.success && result.gemResponse) {
+                    return result.gemResponse;
+                } else {
+                    throw new Error(result.error || 'A API retornou uma resposta inválida.');
+                }
 
             } catch (error) {
-                console.error("ERRO CRÍTICO DURANTE A INICIALIZAÇÃO:", error);
-                // Imprime o erro diretamente na tela para fácil visualização.
-                document.body.innerHTML = `<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #ffdddd; color: #a00; padding: 20px; font-family: monospace; z-index: 9999;"><h1 style="font-size: 24px; font-weight: bold;">Erro Crítico na Página</h1><p>Copie e cole todo este texto:</p><pre style="white-space: pre-wrap;">${error.stack}</pre></div>`;
+                console.error("Erro ao chamar a API do MindMate:", error);
+                alert("Falha ao processar sua entrada. Verifique o console para mais detalhes. Erro: " + error.message);
+                return null;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Processar com IA';
             }
         }
 
-        // --- O CÓDIGO ABAIXO NÃO SERÁ USADO NESTE TESTE, MAS É MANTIDO PARA EVITAR OUTROS ERROS ---
-        let moduleBalanceChart;
-        const state = { allItems: [] };
-        async function callMindMateGem(text) { console.log("callMindMateGem não implementada neste teste."); }
-        function getModuleFromTags(tags) {}
-        function renderAll() {}
-        window.setActiveTab = (tabName) => {}
-        window.setFilter = (moduleKey) => {}
-        function renderMainContent() {}
-        function renderList(container, type) {}
-        function renderTodaysFocus() {}
-        function renderPlanner() {}
-        function renderFilters() {}
-        function renderChart() {}
-        window.openQuickAddModal = () => { alert("Função desativada para o teste de carregamento."); }
-        function renderConfirmationView() {}
-        window.confirmAction = () => {}
-        window.closeModal = () => {}
+        function getModuleFromTags(tags) {
+            if (!tags) return 'default';
+            const tagArray = tags.split(' ');
+            const modTag = tagArray.find(t => t.startsWith('#mod_'));
+            if (!modTag) return 'default';
+            const moduleKey = modTag.replace('#mod_', '');
+            return moduleConfig[moduleKey] ? moduleKey : 'default';
+        }
 
-        // --- FIM DO SCRIPT DE DEPURAÇÃO ---
+        function renderAll() {
+            renderFilters();
+            renderPlanner();
+            renderMainContent();
+            renderTodaysFocus();
+            if (document.getElementById('moduleBalanceChart')) {
+                renderChart();
+            }
+        }
 
-        // Executa a função principal de depuração
+        window.setActiveTab = (tabName) => {
+            state.activeTab = tabName;
+            renderMainContent();
+        }
+
+        window.setFilter = (moduleKey) => {
+            state.currentFilter = moduleKey;
+            renderAll();
+        }
+
+        function renderMainContent() {
+            const tabsContainer = document.getElementById('main-tabs');
+            const contentContainer = document.getElementById('main-content');
+            if (!tabsContainer || !contentContainer) return;
+
+            tabsContainer.innerHTML = `
+                <button onclick="setActiveTab('projects')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📂 Projetos</button>
+                <button onclick="setActiveTab('tasks')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📋 Tarefas</button>
+                <button onclick="setActiveTab('planner')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">🗓️ Planner</button>
+                <button onclick="setActiveTab('diario')" class="tab-button py-4 px-1 border-b-2 font-medium text-lg">📖 Diário</button>
+             `;
+
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.textContent.toLowerCase().includes(state.activeTab)) {
+                    btn.classList.add('active', 'border-blue-600', 'text-blue-600');
+                    btn.style.setProperty('--module-color', '#3b82f6');
+                } else {
+                    btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+                }
+            });
+
+            const typeMap = {
+                projects: 'Projeto',
+                tasks: 'Tarefa',
+                planner: 'Planner',
+                diario: 'Diario'
+            };
+            renderList(contentContainer, typeMap[state.activeTab]);
+        }
+
+        function renderList(container, type) {
+            let items = state.allItems.filter(item => item.classificacao.tipo.toLowerCase() === type.toLowerCase());
+            if (state.currentFilter !== 'all') {
+                items = items.filter(item => item.classificacao.tags && item.classificacao.tags.includes(`#mod_${state.currentFilter}`));
+            }
+
+            if (items.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center py-8">Nenhum item do tipo '${type}' encontrado.</p>`;
+                return;
+            }
+            let html = '<div class="space-y-3 pt-4">';
+            items.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                html += `
+                    <div class="list-item p-4 rounded-lg bg-white shadow-sm cursor-pointer module-item-border module-color-${module}">
+                        <p class="font-semibold">${classificacao.nome_atividade}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTodaysFocus() {
+            const list = document.getElementById('today-focus-list');
+            if (!list) return;
+            list.innerHTML = '';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const todaysItems = state.allItems
+                .filter(item => {
+                    const itemDateStr = item.classificacao.data_agendada;
+                    if (item.classificacao.tipo.toLowerCase() !== 'planner' || !itemDateStr) return false;
+                    const itemDate = new Date(itemDateStr + 'T00:00:00');
+                    return itemDate.getTime() === today.getTime();
+                })
+                .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+            if (todaysItems.length === 0) {
+                list.innerHTML = `<p class="text-gray-500">Nenhuma atividade agendada para hoje.</p>`;
+                return;
+            }
+            todaysItems.forEach(item => {
+                const { classificacao } = item;
+                const module = getModuleFromTags(classificacao.tags);
+                const itemEl = document.createElement('div');
+                itemEl.className = `today-item flex items-center p-3 rounded-lg bg-white`;
+                itemEl.innerHTML = `
+                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 mr-4">
+                    <label class="flex-grow">
+                        <span class="font-semibold">${classificacao.nome_atividade}</span>
+                        <span class="text-sm text-gray-500 ml-2">${classificacao.hora_agendada || ''}</span>
+                    </label>
+                    <span class="w-3 h-3 rounded-full" style="background-color: var(--module-color-${module})"></span>`;
+                list.appendChild(itemEl);
+            });
+        }
+
+        function renderPlanner() {
+            const plannerGrid = document.getElementById('planner-grid');
+            if (!plannerGrid) return;
+            plannerGrid.innerHTML = '';
+            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+            days.forEach((day, index) => {
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'flex flex-col gap-3 p-3 bg-gray-50 rounded-lg min-h-[100px]';
+                dayColumn.innerHTML = `<h4 class="font-bold text-center text-gray-600">${day}</h4>`;
+
+                const dayOfWeek = index; 
+
+                const dayItems = state.allItems
+                    .filter(item => {
+                        if (!item.classificacao.data_agendada || item.classificacao.tipo.toLowerCase() !== 'planner') return false;
+                        const itemDate = new Date(item.classificacao.data_agendada);
+                        const itemUtcDate = new Date(itemDate.getUTCFullYear(), itemDate.getUTCMonth(), itemDate.getUTCDate());
+                        return itemUtcDate.getUTCDay() === dayOfWeek;
+                    })
+                    .sort((a, b) => (a.classificacao.hora_agendada || '').localeCompare(b.classificacao.hora_agendada || ''));
+
+                dayItems.forEach(item => {
+                    const { classificacao } = item;
+                    const module = getModuleFromTags(classificacao.tags);
+                    const itemEl = document.createElement('div');
+                    itemEl.className = `planner-item p-3 rounded-lg shadow-xs cursor-pointer bg-white module-item-border module-color-${module}`;
+                    itemEl.innerHTML = `<p class="font-semibold text-sm">${classificacao.nome_atividade}</p><p class="text-xs text-gray-500">${classificacao.hora_agendada || ''}</p>`;
+                    dayColumn.appendChild(itemEl);
+                });
+                plannerGrid.appendChild(dayColumn);
+            });
+        }
+
+        function renderFilters() {
+            const filterContainer = document.getElementById('filter-container');
+            if (!filterContainer) return;
+            filterContainer.innerHTML = '';
+            const allButton = document.createElement('button');
+            allButton.textContent = 'Todos';
+            allButton.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-700'}`;
+            allButton.style.setProperty('--module-color', '#4b5563');
+            if (state.currentFilter === 'all') allButton.classList.add('active');
+            allButton.addEventListener('click', () => { state.currentFilter = 'all'; renderAll(); });
+            filterContainer.appendChild(allButton);
+
+            Object.entries(moduleConfig).forEach(([key, config]) => {
+                if (key === 'default') return;
+                const button = document.createElement('button');
+                button.innerHTML = `${config.icon} ${config.name}`;
+                button.className = `filter-button px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${state.currentFilter === key ? 'active' : 'bg-gray-200 text-gray-700'}`;
+                button.style.setProperty('--module-color', config.color);
+                button.addEventListener('click', () => { state.currentFilter = key; renderAll(); });
+                filterContainer.appendChild(button);
+            });
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('moduleBalanceChart').getContext('2d');
+            if (moduleBalanceChart) {
+                moduleBalanceChart.destroy();
+            }
+
+            const moduleCounts = {};
+            Object.keys(moduleConfig).forEach(key => { if (key !== 'default') moduleCounts[key] = 0; });
+
+            state.allItems.forEach(item => {
+                const tags = item.classificacao.tags || '';
+                const modules = tags.match(/#mod_(\w+)/g) || [];
+                modules.forEach(mod => {
+                    const key = mod.replace('#mod_', '');
+                    if (moduleCounts.hasOwnProperty(key)) {
+                        moduleCounts[key]++;
+                    }
+                });
+            });
+
+            moduleBalanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moduleCounts).map(key => moduleConfig[key].name),
+                    datasets: [{
+                        data: Object.values(moduleCounts),
+                        backgroundColor: Object.keys(moduleCounts).map(key => moduleConfig[key].color),
+                        borderColor: '#f8f7f4',
+                        borderWidth: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        window.openQuickAddModal = () => {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Rápida</h2>
+                <textarea id="quick-add-input" class="w-full p-2 border rounded-lg" rows="4" placeholder="Ex: revisar o relatório de finanças #mod_finance para amanhã às 10:00"></textarea>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-gray-200 rounded-lg">Cancelar</button>
+                    <button id="quick-add-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg">Processar com IA</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('quick-add-input').focus();
+
+            document.getElementById('quick-add-submit').onclick = async () => {
+                const input = document.getElementById('quick-add-input').value.trim();
+                if (!input) return;
+
+                state.gemResponse = await callMindMateGem(input);
+                if (state.gemResponse) {
+                    renderConfirmationView();
+                }
+            };
+        };
+
+        function renderConfirmationView() {
+            const modalContent = document.getElementById('modal-content');
+            const { classificacao, google_action } = state.gemResponse;
+            const subtasksHtml = (classificacao.subtarefas && classificacao.subtarefas.length > 0)
+                ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>`
+                : '';
+            
+            let dateString = '';
+            if (classificacao.data_agendada) {
+                const itemDate = new Date(classificacao.data_agendada);
+                const itemUtcDate = new Date(itemDate.getUTCFullYear(), itemDate.getUTCMonth(), itemDate.getUTCDate());
+                dateString = itemUtcDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', timeZone: 'UTC' });
+            }
+
+            modalContent.innerHTML = `
+                <h2 class="text-2xl font-bold mb-4">Captura Assistida</h2>
+                <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
+                <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                    <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
+                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
+                    ${dateString ? `<p><strong>Data:</strong> ${dateString} ${classificacao.hora_agendada || ''}</p>` : ''}
+                    ${subtasksHtml}
+                    <p class="pt-2 border-t border-gray-300"><strong>Ação a ser executada:</strong> <span class="font-semibold text-blue-600">Criar entrada em ${google_action.service}</span></p>
+                </div>
+                <div class="mt-6 flex gap-4">
+                     <button onclick="confirmAction()" class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">✔️ Sim, executar</button>
+                     <button onclick="closeModal()" class="flex-1 bg-gray-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600">Cancelar</button>
+                </div>
+             `;
+        }
+
+        window.confirmAction = () => {
+            console.log("Ação confirmada e executada no backend. Atualizando a UI:", state.gemResponse);
+            state.allItems.push(state.gemResponse);
+            renderAll();
+            alert(`Ação executada no ${state.gemResponse.google_action.service} (via API)`);
+            closeModal();
+        };
+
+        window.closeModal = () => {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal-content').innerHTML = '';
+        };
+
+        function main() {
+            state.allItems = [
+                {classificacao: {id: '1', nome_atividade: "Ritual Matinal: Meditação", tipo: "Planner", tags: "#mod_mind", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "07:00", subtarefas:[]}},
+                {classificacao: {id: '2', nome_atividade: "Bloco de Foco: Relatório", tipo: "Planner", tags: "#mod_work", data_agendada: new Date().toISOString().split('T')[0], hora_agendada: "09:00", subtarefas:[]}},
+                {classificacao: {id: '3', nome_atividade: "Ligar para o contabilista", tipo: "Tarefa", tags: "#mod_finance", status: 'Ativo', subtarefas:[]}},
+                {classificacao: {id: '4', nome_atividade: "Lançar novo site MindMate", tipo: "Projeto", tags: "#mod_work #mod_purpose", status: 'Ativo', subtarefas:[]}},
+            ];
+            renderAll();
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('app').classList.remove('opacity-0');
+        }
+
         main();
     </script>
 </body>
