@@ -152,7 +152,8 @@
 
             try {
                 // Realiza a chamada POST para a API do Google Apps Script.
-                const response = await fetch(https://script.google.com/macros/s/AKfycby-JE_HzZvkiWqfIhckIIbMERgsVah33EDt_ho6GxvKEabrH-N0sGumzGBUaBg5sLE/exec, {
+                // CORREÇÃO DE SINTAXE: O URL deve estar entre aspas ou ser a constante GOOGLE_APPS_SCRIPT_API_URL.
+                const response = await fetch(GOOGLE_APPS_SCRIPT_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -646,8 +647,8 @@
                 
                 const apiResult = await callMindMateGem(input); // Chama a API do Apps Script
                 if (apiResult.success) {
-                    state.gemResponse = apiResult.gemResponse; // Guarda a resposta para a tela de confirmação
-                    state.apiFeedbackMessage = apiResult.feedback; // Guarda o feedback da API
+                    state.gemResponse = apiResult.gemResponse; 
+                    state.apiFeedbackMessage = apiResult.feedback; 
                     renderConfirmationView(); // Mostra a tela de confirmação
                 } else {
                     // Exibe um alerta de erro caso a API falhe.
@@ -667,7 +668,7 @@
                 <p class="text-gray-600 mb-4">Analisei sua entrada. É isto que você pretende fazer?</p>
                 <div class="p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
                     <p><strong>Nome:</strong> ${classificacao.nome_atividade}</p>
-                    <p><strong>Tipo:</strong> ${classificacao.tipo}</p>
+                    <p><strong>Tipo:</strong> ${classsificacao.tipo}</p>
                     <p><strong>Tags:</strong> ${classificacao.tags || 'Nenhuma'}</p>
                     ${classificacao.data_agendada ? `<p><strong>Data:</strong> ${new Date(classificacao.data_agendada + 'T00:00:00').toLocaleDateString('pt-BR', {weekday: 'long', day: '2-digit', month: 'long'})} ${classificacao.hora_agendada || ''}</p>` : ''}
                     ${classificacao.subtarefas.length > 0 ? `<p><strong>Subtarefas:</strong> ${classificacao.subtarefas.map(s => s.texto).join(', ')}</p>` : ''}
@@ -686,10 +687,10 @@
          */
         window.confirmAction = async () => {
              console.log("AÇÃO CONFIRMADA: Google Apps Script já executou ou está executando.");
-             state.allItems.push(state.gemResponse); // Adiciona o item à lista local para exibição no dashboard
-             renderAll(); // Re-renderiza todas as seções do dashboard para mostrar o novo item
-             alert(state.apiFeedbackMessage || "Ação executada com sucesso!"); // Exibe o feedback da API
-             closeModal(); // Fecha o modal
+             state.allItems.push(state.gemResponse); 
+             renderAll(); 
+             alert(state.apiFeedbackMessage || "Ação executada com sucesso!"); 
+             closeModal();
         };
         
         /**
@@ -705,7 +706,6 @@
          * Popula os dados iniciais e renderiza o dashboard.
          */
         function main() {
-            // Dados de exemplo para popular o dashboard e testar as funcionalidades.
             const today = new Date();
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
